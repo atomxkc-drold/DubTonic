@@ -1,0 +1,952 @@
+package com.dubtonic.player.ui.screens;
+
+import androidx.compose.foundation.BackgroundKt;
+import androidx.compose.foundation.ClickableKt;
+import androidx.compose.foundation.layout.Arrangement;
+import androidx.compose.foundation.layout.BoxKt;
+import androidx.compose.foundation.layout.BoxScopeInstance;
+import androidx.compose.foundation.layout.ColumnKt;
+import androidx.compose.foundation.layout.ColumnScopeInstance;
+import androidx.compose.foundation.layout.PaddingKt;
+import androidx.compose.foundation.layout.PaddingValues;
+import androidx.compose.foundation.layout.RowKt;
+import androidx.compose.foundation.layout.RowScopeInstance;
+import androidx.compose.foundation.layout.SizeKt;
+import androidx.compose.foundation.layout.SpacerKt;
+import androidx.compose.foundation.lazy.LazyDslKt;
+import androidx.compose.foundation.lazy.LazyItemScope;
+import androidx.compose.foundation.lazy.LazyListScope;
+import androidx.compose.foundation.shape.RoundedCornerShapeKt;
+import androidx.compose.material.icons.Icons;
+import androidx.compose.material.icons.rounded.PlayArrowKt;
+import androidx.compose.material.icons.rounded.ShuffleKt;
+import androidx.compose.material3.IconKt;
+import androidx.compose.material3.MaterialTheme;
+import androidx.compose.material3.TextKt;
+import androidx.compose.runtime.Applier;
+import androidx.compose.runtime.ComposablesKt;
+import androidx.compose.runtime.Composer;
+import androidx.compose.runtime.ComposerKt;
+import androidx.compose.runtime.CompositionLocalMap;
+import androidx.compose.runtime.CompositionScopedCoroutineScopeCanceller;
+import androidx.compose.runtime.EffectsKt;
+import androidx.compose.runtime.RecomposeScopeImplKt;
+import androidx.compose.runtime.ScopeUpdateScope;
+import androidx.compose.runtime.SnapshotStateKt;
+import androidx.compose.runtime.State;
+import androidx.compose.runtime.Updater;
+import androidx.compose.runtime.internal.ComposableLambdaKt;
+import androidx.compose.ui.Alignment;
+import androidx.compose.ui.ComposedModifierKt;
+import androidx.compose.ui.Modifier;
+import androidx.compose.ui.draw.ClipKt;
+import androidx.compose.ui.layout.MeasurePolicy;
+import androidx.compose.ui.node.ComposeUiNode;
+import androidx.compose.ui.text.TextLayoutResult;
+import androidx.compose.ui.text.font.FontFamily;
+import androidx.compose.ui.text.font.FontStyle;
+import androidx.compose.ui.text.font.FontWeight;
+import androidx.compose.ui.text.style.TextAlign;
+import androidx.compose.ui.text.style.TextDecoration;
+import androidx.compose.ui.text.style.TextOverflow;
+import androidx.compose.ui.unit.Dp;
+import androidx.media3.exoplayer.RendererCapabilities;
+import androidx.media3.extractor.text.ttml.TtmlNode;
+import com.dubtonic.player.data.LibraryRepository;
+import com.dubtonic.player.data.LoadState;
+import com.dubtonic.player.data.api.ServerConfig;
+import com.dubtonic.player.data.model.Album;
+import com.dubtonic.player.data.model.Song;
+import com.dubtonic.player.di.AppContainer;
+import com.dubtonic.player.player.PlayerBus;
+import com.dubtonic.player.player.PlayerUiState;
+import com.dubtonic.player.player.QueueItem;
+import com.dubtonic.player.ui.components.ComponentsKt;
+import com.dubtonic.player.ui.theme.DubColors;
+import com.dubtonic.player.ui.theme.DubDimens;
+import com.dubtonic.player.ui.theme.DubTheme;
+import com.dubtonic.player.util.FormattersKt;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Set;
+import kotlin.Metadata;
+import kotlin.ResultKt;
+import kotlin.Unit;
+import kotlin.collections.CollectionsKt;
+import kotlin.collections.MapsKt;
+import kotlin.collections.SetsKt;
+import kotlin.comparisons.ComparisonsKt;
+import kotlin.coroutines.Continuation;
+import kotlin.coroutines.EmptyCoroutineContext;
+import kotlin.coroutines.intrinsics.IntrinsicsKt;
+import kotlin.coroutines.jvm.internal.DebugMetadata;
+import kotlin.coroutines.jvm.internal.SuspendLambda;
+import kotlin.jvm.functions.Function0;
+import kotlin.jvm.functions.Function1;
+import kotlin.jvm.functions.Function2;
+import kotlin.jvm.functions.Function3;
+import kotlin.jvm.functions.Function4;
+import kotlin.jvm.internal.Intrinsics;
+import kotlin.ranges.RangesKt;
+import kotlin.text.StringsKt;
+import kotlinx.coroutines.BuildersKt__Builders_commonKt;
+import kotlinx.coroutines.CoroutineScope;
+
+/* JADX INFO: compiled from: HomeScreen.kt */
+/* JADX INFO: loaded from: classes3.dex */
+@Metadata(d1 = {"\u0000N\n\u0000\n\u0002\u0010\u0002\n\u0000\n\u0002\u0018\u0002\n\u0000\n\u0002\u0018\u0002\n\u0002\u0010\u000e\n\u0002\b\u0002\n\u0002\u0018\u0002\n\u0002\b\u0003\n\u0002\u0018\u0002\n\u0002\b\u0005\n\u0002\u0018\u0002\n\u0000\n\u0002\u0018\u0002\n\u0002\u0010 \n\u0002\b\b\n\u0002\u0018\u0002\n\u0002\b\u0002\n\u0002\u0010\"\n\u0000\n\u0002\u0018\u0002\u001aK\u0010\u0000\u001a\u00020\u00012\u0006\u0010\u0002\u001a\u00020\u00032\u0012\u0010\u0004\u001a\u000e\u0012\u0004\u0012\u00020\u0006\u0012\u0004\u0012\u00020\u00010\u00052\u0012\u0010\u0007\u001a\u000e\u0012\u0004\u0012\u00020\u0006\u0012\u0004\u0012\u00020\u00010\u00052\f\u0010\b\u001a\b\u0012\u0004\u0012\u00020\u00010\tH\u0007¢\u0006\u0002\u0010\n\u001a;\u0010\u000b\u001a\u00020\u00012\u0006\u0010\f\u001a\u00020\r2\b\u0010\u000e\u001a\u0004\u0018\u00010\u00062\f\u0010\u000f\u001a\b\u0012\u0004\u0012\u00020\u00010\t2\f\u0010\u0010\u001a\b\u0012\u0004\u0012\u00020\u00010\tH\u0003¢\u0006\u0002\u0010\u0011\u001af\u0010\u0012\u001a\u00020\u0001*\u00020\u00132\u0012\u0010\u0014\u001a\u000e\u0012\n\u0012\b\u0012\u0004\u0012\u00020\r0\u00160\u00152\u0006\u0010\u0017\u001a\u00020\u00062\u0014\u0010\u0018\u001a\u0010\u0012\u0004\u0012\u00020\u0006\u0012\u0006\u0012\u0004\u0018\u00010\u00060\u00052\u0012\u0010\u0004\u001a\u000e\u0012\u0004\u0012\u00020\u0006\u0012\u0004\u0012\u00020\u00010\u00052\u0012\u0010\u0019\u001a\u000e\u0012\u0004\u0012\u00020\r\u0012\u0004\u0012\u00020\u00010\u0005H\u0002¨\u0006\u001a²\u0006\u0016\u0010\u001b\u001a\u000e\u0012\n\u0012\b\u0012\u0004\u0012\u00020\r0\u00160\u0015X\u008a\u0084\u0002²\u0006\u0016\u0010\u001c\u001a\u000e\u0012\n\u0012\b\u0012\u0004\u0012\u00020\r0\u00160\u0015X\u008a\u0084\u0002²\u0006\u0016\u0010\u001d\u001a\u000e\u0012\n\u0012\b\u0012\u0004\u0012\u00020\r0\u00160\u0015X\u008a\u0084\u0002²\u0006\u0016\u0010\u001e\u001a\u000e\u0012\n\u0012\b\u0012\u0004\u0012\u00020\u001f0\u00160\u0015X\u008a\u0084\u0002²\u0006\u0010\u0010 \u001a\b\u0012\u0004\u0012\u00020\u00060\u0016X\u008a\u0084\u0002²\u0006\u0010\u0010!\u001a\b\u0012\u0004\u0012\u00020\u00060\"X\u008a\u0084\u0002²\u0006\n\u0010#\u001a\u00020$X\u008a\u0084\u0002"}, d2 = {"HomeScreen", "", TtmlNode.RUBY_CONTAINER, "Lcom/dubtonic/player/di/AppContainer;", "onOpenAlbum", "Lkotlin/Function1;", "", "onOpenArtist", "onOpenPlayer", "Lkotlin/Function0;", "(Lcom/dubtonic/player/di/AppContainer;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function0;Landroidx/compose/runtime/Composer;I)V", "FeaturedHero", "album", "Lcom/dubtonic/player/data/model/Album;", "artworkUrl", "onOpen", "onPlay", "(Lcom/dubtonic/player/data/model/Album;Ljava/lang/String;Lkotlin/jvm/functions/Function0;Lkotlin/jvm/functions/Function0;Landroidx/compose/runtime/Composer;I)V", "albumShelf", "Landroidx/compose/foundation/lazy/LazyListScope;", "itemState", "Lcom/dubtonic/player/data/LoadState;", "", "title", "artUrl", "onPlayAlbum", "app_release", "albums", "newest", "randomAlbums", "songsState", "Lcom/dubtonic/player/data/model/Song;", "recentIds", "starred", "", "playerState", "Lcom/dubtonic/player/player/PlayerUiState;"}, k = 2, mv = {2, 0, 0}, xi = 48)
+public final class HomeScreenKt {
+    /* JADX INFO: Access modifiers changed from: private */
+    public static final Unit FeaturedHero$lambda$21(Album album, String str, Function0 function0, Function0 function1, int i, Composer composer, int i2) {
+        FeaturedHero(album, str, function0, function1, composer, RecomposeScopeImplKt.updateChangedFlags(i | 1));
+        return Unit.INSTANCE;
+    }
+
+    /* JADX INFO: Access modifiers changed from: private */
+    public static final Unit HomeScreen$lambda$16(AppContainer appContainer, Function1 function1, Function1 function2, Function0 function0, int i, Composer composer, int i2) {
+        HomeScreen(appContainer, function1, function2, function0, composer, RecomposeScopeImplKt.updateChangedFlags(i | 1));
+        return Unit.INSTANCE;
+    }
+
+    public static final void HomeScreen(final AppContainer container, final Function1<? super String, Unit> onOpenAlbum, final Function1<? super String, Unit> onOpenArtist, final Function0<Unit> onOpenPlayer, Composer composer, final int i) {
+        LinkedHashMap linkedHashMapEmptyMap;
+        Object obj;
+        Composer composer2;
+        List list;
+        List list2;
+        Intrinsics.checkNotNullParameter(container, "container");
+        Intrinsics.checkNotNullParameter(onOpenAlbum, "onOpenAlbum");
+        Intrinsics.checkNotNullParameter(onOpenArtist, "onOpenArtist");
+        Intrinsics.checkNotNullParameter(onOpenPlayer, "onOpenPlayer");
+        Composer composerStartRestartGroup = composer.startRestartGroup(473167645);
+        int i2 = (i & 6) == 0 ? (composerStartRestartGroup.changedInstance(container) ? 4 : 2) | i : i;
+        if ((i & 48) == 0) {
+            i2 |= composerStartRestartGroup.changedInstance(onOpenAlbum) ? 32 : 16;
+        }
+        if ((i & 3072) == 0) {
+            i2 |= composerStartRestartGroup.changedInstance(onOpenPlayer) ? 2048 : 1024;
+        }
+        int i3 = i2;
+        if ((i3 & 1043) != 1042 || !composerStartRestartGroup.getSkipping()) {
+            if (ComposerKt.isTraceInProgress()) {
+                ComposerKt.traceEventStart(473167645, i3, -1, "com.dubtonic.player.ui.screens.HomeScreen (HomeScreen.kt:58)");
+            }
+            final LibraryRepository library = container.getLibrary();
+            final DubColors colors = DubTheme.INSTANCE.getColors(composerStartRestartGroup, 6);
+            final State stateCollectAsState = SnapshotStateKt.collectAsState(library.getAlbums(), null, composerStartRestartGroup, 0, 1);
+            final State stateCollectAsState2 = SnapshotStateKt.collectAsState(library.getNewest(), null, composerStartRestartGroup, 0, 1);
+            final State stateCollectAsState3 = SnapshotStateKt.collectAsState(library.getRandomAlbums(), null, composerStartRestartGroup, 0, 1);
+            State stateCollectAsState4 = SnapshotStateKt.collectAsState(library.getSongs(), null, composerStartRestartGroup, 0, 1);
+            State stateCollectAsState5 = SnapshotStateKt.collectAsState(container.getSettings().getRecentFlow(), CollectionsKt.emptyList(), null, composerStartRestartGroup, 48, 2);
+            final State stateCollectAsState6 = SnapshotStateKt.collectAsState(container.getSettings().getStarredFlow(), SetsKt.emptySet(), null, composerStartRestartGroup, 48, 2);
+            final State stateCollectAsState7 = SnapshotStateKt.collectAsState(PlayerBus.INSTANCE.getState(), null, composerStartRestartGroup, 0, 1);
+            final ServerConfig serverNow = container.getSettings().getServerNow();
+            final boolean zIsDemo = library.isDemo();
+            ComposerKt.sourceInformationMarkerStart(composerStartRestartGroup, 773894976, "CC(rememberCoroutineScope)482@20332L144:Effects.kt#9igjgp");
+            ComposerKt.sourceInformationMarkerStart(composerStartRestartGroup, -954367824, "CC(remember):Effects.kt#9igjgp");
+            Object objRememberedValue = composerStartRestartGroup.rememberedValue();
+            if (objRememberedValue == Composer.INSTANCE.getEmpty()) {
+                CompositionScopedCoroutineScopeCanceller compositionScopedCoroutineScopeCanceller = new CompositionScopedCoroutineScopeCanceller(EffectsKt.createCompositionCoroutineScope(EmptyCoroutineContext.INSTANCE, composerStartRestartGroup));
+                composerStartRestartGroup.updateRememberedValue(compositionScopedCoroutineScopeCanceller);
+                objRememberedValue = compositionScopedCoroutineScopeCanceller;
+            }
+            ComposerKt.sourceInformationMarkerEnd(composerStartRestartGroup);
+            final CoroutineScope coroutineScope = ((CompositionScopedCoroutineScopeCanceller) objRememberedValue).getCoroutineScope();
+            ComposerKt.sourceInformationMarkerEnd(composerStartRestartGroup);
+            LoadState<List<Song>> loadStateHomeScreen$lambda$3 = HomeScreen$lambda$3(stateCollectAsState4);
+            LoadState.Ready ready = loadStateHomeScreen$lambda$3 instanceof LoadState.Ready ? (LoadState.Ready) loadStateHomeScreen$lambda$3 : null;
+            if (ready == null || (list2 = (List) ready.getValue()) == null) {
+                linkedHashMapEmptyMap = null;
+            } else {
+                linkedHashMapEmptyMap = new LinkedHashMap(RangesKt.coerceAtLeast(MapsKt.mapCapacity(CollectionsKt.collectionSizeOrDefault(list2, 10)), 16));
+                for (Iterator it = r2.iterator(); it.hasNext(); it = it) {
+                    Object next = it.next();
+                    linkedHashMapEmptyMap.put(((Song) next).getId(), next);
+                }
+            }
+            if (linkedHashMapEmptyMap == null) {
+                linkedHashMapEmptyMap = MapsKt.emptyMap();
+            }
+            List<String> listHomeScreen$lambda$4 = HomeScreen$lambda$4(stateCollectAsState5);
+            ArrayList arrayList = new ArrayList();
+            Iterator it2 = listHomeScreen$lambda$4.iterator();
+            while (it2.hasNext()) {
+                Iterator it3 = it2;
+                Song song = (Song) linkedHashMapEmptyMap.get((String) it2.next());
+                if (song != null) {
+                    arrayList.add(song);
+                }
+                it2 = it3;
+            }
+            final ArrayList arrayList2 = arrayList;
+            LoadState<List<Album>> loadStateHomeScreen$lambda$2 = HomeScreen$lambda$2(stateCollectAsState3);
+            LoadState.Ready ready2 = loadStateHomeScreen$lambda$2 instanceof LoadState.Ready ? (LoadState.Ready) loadStateHomeScreen$lambda$2 : null;
+            Album album = (ready2 == null || (list = (List) ready2.getValue()) == null) ? null : (Album) CollectionsKt.firstOrNull(list);
+            LoadState<List<Album>> loadStateHomeScreen$lambda$0 = HomeScreen$lambda$0(stateCollectAsState);
+            LoadState.Ready ready3 = loadStateHomeScreen$lambda$0 instanceof LoadState.Ready ? (LoadState.Ready) loadStateHomeScreen$lambda$0 : null;
+            List listEmptyList = ready3 != null ? (List) ready3.getValue() : null;
+            if (listEmptyList == null) {
+                listEmptyList = CollectionsKt.emptyList();
+            }
+            final List listTake = CollectionsKt.take(CollectionsKt.sortedWith(listEmptyList, new Comparator() { // from class: com.dubtonic.player.ui.screens.HomeScreenKt$HomeScreen$$inlined$sortedByDescending$1
+                /* JADX WARN: Multi-variable type inference failed */
+                @Override // java.util.Comparator
+                public final int compare(T t, T t2) {
+                    return ComparisonsKt.compareValues(((Album) t2).getCreated(), ((Album) t).getCreated());
+                }
+            }), 24);
+            Modifier modifierFillMaxWidth$default = SizeKt.fillMaxWidth$default(Modifier.INSTANCE, 0.0f, 1, null);
+            PaddingValues paddingValuesM678PaddingValuesa9UjIt4$default = PaddingKt.m678PaddingValuesa9UjIt4$default(0.0f, Dp.m6299constructorimpl(10), 0.0f, Dp.m6299constructorimpl(24), 5, null);
+            composerStartRestartGroup.startReplaceGroup(-872610722);
+            boolean zChanged = ((i3 & 112) == 32) | composerStartRestartGroup.changed(colors) | composerStartRestartGroup.changed(zIsDemo) | composerStartRestartGroup.changed(serverNow) | composerStartRestartGroup.changedInstance(album) | composerStartRestartGroup.changedInstance(library) | composerStartRestartGroup.changedInstance(coroutineScope) | ((i3 & 7168) == 2048) | composerStartRestartGroup.changedInstance(arrayList2) | composerStartRestartGroup.changed(stateCollectAsState7) | composerStartRestartGroup.changed(stateCollectAsState6) | composerStartRestartGroup.changedInstance(container) | composerStartRestartGroup.changed(stateCollectAsState2) | composerStartRestartGroup.changed(stateCollectAsState3) | composerStartRestartGroup.changedInstance(listTake) | composerStartRestartGroup.changed(stateCollectAsState);
+            Object objRememberedValue2 = composerStartRestartGroup.rememberedValue();
+            if (zChanged || objRememberedValue2 == Composer.INSTANCE.getEmpty()) {
+                final Album album2 = album;
+                obj = new Function1() { // from class: com.dubtonic.player.ui.screens.HomeScreenKt$$ExternalSyntheticLambda1
+                    @Override // kotlin.jvm.functions.Function1
+                    public final Object invoke(Object obj2) {
+                        return HomeScreenKt.HomeScreen$lambda$15$lambda$14(album2, arrayList2, onOpenAlbum, listTake, colors, zIsDemo, serverNow, coroutineScope, library, onOpenPlayer, container, stateCollectAsState6, stateCollectAsState7, stateCollectAsState2, stateCollectAsState3, stateCollectAsState, (LazyListScope) obj2);
+                    }
+                };
+                composer2 = composerStartRestartGroup;
+                composer2.updateRememberedValue(obj);
+            } else {
+                obj = objRememberedValue2;
+                composer2 = composerStartRestartGroup;
+            }
+            composer2.endReplaceGroup();
+            LazyDslKt.LazyColumn(modifierFillMaxWidth$default, null, paddingValuesM678PaddingValuesa9UjIt4$default, false, null, null, null, false, (Function1) obj, composer2, 390, 250);
+            if (ComposerKt.isTraceInProgress()) {
+                ComposerKt.traceEventEnd();
+            }
+        } else {
+            composerStartRestartGroup.skipToGroupEnd();
+            composer2 = composerStartRestartGroup;
+        }
+        ScopeUpdateScope scopeUpdateScopeEndRestartGroup = composer2.endRestartGroup();
+        if (scopeUpdateScopeEndRestartGroup != null) {
+            scopeUpdateScopeEndRestartGroup.updateScope(new Function2() { // from class: com.dubtonic.player.ui.screens.HomeScreenKt$$ExternalSyntheticLambda2
+                @Override // kotlin.jvm.functions.Function2
+                public final Object invoke(Object obj2, Object obj3) {
+                    return HomeScreenKt.HomeScreen$lambda$16(container, onOpenAlbum, onOpenArtist, onOpenPlayer, i, (Composer) obj2, ((Integer) obj3).intValue());
+                }
+            });
+        }
+    }
+
+    /* JADX INFO: Access modifiers changed from: private */
+    public static final String HomeScreen$artUrl(ServerConfig serverConfig, LibraryRepository libraryRepository, String str) {
+        if (serverConfig != null) {
+            return LibraryRepository.coverArtUrl$default(libraryRepository, serverConfig, str, 0, 4, null);
+        }
+        return null;
+    }
+
+    /* JADX INFO: Access modifiers changed from: private */
+    public static final void HomeScreen$playAlbum(CoroutineScope coroutineScope, ServerConfig serverConfig, boolean z, Function0<Unit> function0, LibraryRepository libraryRepository, Album album) {
+        BuildersKt__Builders_commonKt.launch$default(coroutineScope, null, null, new HomeScreenKt$HomeScreen$playAlbum$1(serverConfig, z, function0, libraryRepository, album, null), 3, null);
+    }
+
+    /* JADX INFO: Access modifiers changed from: private */
+    public static final Unit HomeScreen$lambda$15$lambda$14(Album album, final List list, Function1 function1, List list2, final DubColors dubColors, final boolean z, final ServerConfig serverConfig, final CoroutineScope coroutineScope, final LibraryRepository libraryRepository, final Function0 function0, final AppContainer appContainer, final State state, final State state2, State state3, State state4, State state5, LazyListScope LazyColumn) {
+        Intrinsics.checkNotNullParameter(LazyColumn, "$this$LazyColumn");
+        LazyListScope.item$default(LazyColumn, null, null, ComposableLambdaKt.composableLambdaInstance(-1502236151, true, new Function3<LazyItemScope, Composer, Integer, Unit>() { // from class: com.dubtonic.player.ui.screens.HomeScreenKt$HomeScreen$1$1$1
+            @Override // kotlin.jvm.functions.Function3
+            public /* bridge */ /* synthetic */ Unit invoke(LazyItemScope lazyItemScope, Composer composer, Integer num) {
+                invoke(lazyItemScope, composer, num.intValue());
+                return Unit.INSTANCE;
+            }
+
+            public final void invoke(LazyItemScope item, Composer composer, int i) {
+                String str;
+                Intrinsics.checkNotNullParameter(item, "$this$item");
+                if ((i & 17) != 16 || !composer.getSkipping()) {
+                    if (ComposerKt.isTraceInProgress()) {
+                        ComposerKt.traceEventStart(-1502236151, i, -1, "com.dubtonic.player.ui.screens.HomeScreen.<anonymous>.<anonymous>.<anonymous> (HomeScreen.kt:96)");
+                    }
+                    Modifier modifierM682paddingVpY3zN4 = PaddingKt.m682paddingVpY3zN4(Modifier.INSTANCE, Dp.m6299constructorimpl(18), Dp.m6299constructorimpl(8));
+                    DubColors dubColors2 = dubColors;
+                    boolean z2 = z;
+                    ServerConfig serverConfig2 = serverConfig;
+                    ComposerKt.sourceInformationMarkerStart(composer, -483455358, "CC(Column)P(2,3,1)86@4330L61,87@4396L133:Column.kt#2w3rfo");
+                    MeasurePolicy measurePolicyColumnMeasurePolicy = ColumnKt.columnMeasurePolicy(Arrangement.INSTANCE.getTop(), Alignment.INSTANCE.getStart(), composer, 0);
+                    ComposerKt.sourceInformationMarkerStart(composer, -1323940314, "CC(Layout)P(!1,2)79@3208L23,82@3359L411:Layout.kt#80mrfh");
+                    int currentCompositeKeyHash = ComposablesKt.getCurrentCompositeKeyHash(composer, 0);
+                    CompositionLocalMap currentCompositionLocalMap = composer.getCurrentCompositionLocalMap();
+                    Modifier modifierMaterializeModifier = ComposedModifierKt.materializeModifier(composer, modifierM682paddingVpY3zN4);
+                    Function0<ComposeUiNode> constructor = ComposeUiNode.INSTANCE.getConstructor();
+                    ComposerKt.sourceInformationMarkerStart(composer, -692256719, "CC(ReusableComposeNode)P(1,2)376@14062L9:Composables.kt#9igjgp");
+                    if (!(composer.getApplier() instanceof Applier)) {
+                        ComposablesKt.invalidApplier();
+                    }
+                    composer.startReusableNode();
+                    if (composer.getInserting()) {
+                        composer.createNode(constructor);
+                    } else {
+                        composer.useNode();
+                    }
+                    Composer composerM3333constructorimpl = Updater.m3333constructorimpl(composer);
+                    Updater.m3340setimpl(composerM3333constructorimpl, measurePolicyColumnMeasurePolicy, ComposeUiNode.INSTANCE.getSetMeasurePolicy());
+                    Updater.m3340setimpl(composerM3333constructorimpl, currentCompositionLocalMap, ComposeUiNode.INSTANCE.getSetResolvedCompositionLocals());
+                    Function2<ComposeUiNode, Integer, Unit> setCompositeKeyHash = ComposeUiNode.INSTANCE.getSetCompositeKeyHash();
+                    if (composerM3333constructorimpl.getInserting() || !Intrinsics.areEqual(composerM3333constructorimpl.rememberedValue(), Integer.valueOf(currentCompositeKeyHash))) {
+                        composerM3333constructorimpl.updateRememberedValue(Integer.valueOf(currentCompositeKeyHash));
+                        composerM3333constructorimpl.apply(Integer.valueOf(currentCompositeKeyHash), setCompositeKeyHash);
+                    }
+                    Updater.m3340setimpl(composerM3333constructorimpl, modifierMaterializeModifier, ComposeUiNode.INSTANCE.getSetModifier());
+                    ComposerKt.sourceInformationMarkerStart(composer, -384784025, "C88@4444L9:Column.kt#2w3rfo");
+                    ColumnScopeInstance columnScopeInstance = ColumnScopeInstance.INSTANCE;
+                    TextKt.m2373Text4IGK_g(FormattersKt.greeting$default(0, 1, null), (Modifier) null, dubColors2.m7164getText0d7_KjU(), 0L, (FontStyle) null, (FontWeight) null, (FontFamily) null, 0L, (TextDecoration) null, (TextAlign) null, 0L, 0, false, 0, 0, (Function1<? super TextLayoutResult, Unit>) null, MaterialTheme.INSTANCE.getTypography(composer, MaterialTheme.$stable).getDisplaySmall(), composer, 0, 0, 65530);
+                    if (z2) {
+                        str = "Explore the demo library.";
+                    } else if (serverConfig2 != null) {
+                        String name = serverConfig2.getName();
+                        if (StringsKt.isBlank(name)) {
+                            name = "Your server";
+                        }
+                        str = ((Object) name) + " is ready.";
+                    } else {
+                        str = "Your whole library. Anywhere.";
+                    }
+                    TextKt.m2373Text4IGK_g(str, (Modifier) null, dubColors2.m7166getTextSoft0d7_KjU(), 0L, (FontStyle) null, (FontWeight) null, (FontFamily) null, 0L, (TextDecoration) null, (TextAlign) null, 0L, 0, false, 0, 0, (Function1<? super TextLayoutResult, Unit>) null, MaterialTheme.INSTANCE.getTypography(composer, MaterialTheme.$stable).getBodyLarge(), composer, 0, 0, 65530);
+                    ComposerKt.sourceInformationMarkerEnd(composer);
+                    composer.endNode();
+                    ComposerKt.sourceInformationMarkerEnd(composer);
+                    ComposerKt.sourceInformationMarkerEnd(composer);
+                    ComposerKt.sourceInformationMarkerEnd(composer);
+                    if (ComposerKt.isTraceInProgress()) {
+                        ComposerKt.traceEventEnd();
+                        return;
+                    }
+                    return;
+                }
+                composer.skipToGroupEnd();
+            }
+        }), 3, null);
+        if (album != null) {
+            LazyListScope.item$default(LazyColumn, null, null, ComposableLambdaKt.composableLambdaInstance(-432306354, true, new HomeScreenKt$HomeScreen$1$1$2(album, function1, coroutineScope, serverConfig, libraryRepository, z, function0)), 3, null);
+        }
+        if (!list.isEmpty()) {
+            LazyListScope.item$default(LazyColumn, null, null, ComposableSingletons$HomeScreenKt.INSTANCE.m7056getLambda1$app_release(), 3, null);
+            final List listTake = CollectionsKt.take(list, 6);
+            final HomeScreenKt$HomeScreen$lambda$15$lambda$14$$inlined$items$default$1 homeScreenKt$HomeScreen$lambda$15$lambda$14$$inlined$items$default$1 = new Function1() { // from class: com.dubtonic.player.ui.screens.HomeScreenKt$HomeScreen$lambda$15$lambda$14$$inlined$items$default$1
+                @Override // kotlin.jvm.functions.Function1
+                public final Void invoke(Song song) {
+                    return null;
+                }
+
+                @Override // kotlin.jvm.functions.Function1
+                public /* bridge */ /* synthetic */ Object invoke(Object obj) {
+                    return invoke((Song) obj);
+                }
+            };
+            LazyColumn.items(listTake.size(), null, new Function1<Integer, Object>() { // from class: com.dubtonic.player.ui.screens.HomeScreenKt$HomeScreen$lambda$15$lambda$14$$inlined$items$default$3
+                /* JADX WARN: 'super' call moved to the top of the method (can break code semantics) */
+                {
+                    super(1);
+                }
+
+                @Override // kotlin.jvm.functions.Function1
+                public /* bridge */ /* synthetic */ Object invoke(Integer num) {
+                    return invoke(num.intValue());
+                }
+
+                public final Object invoke(int i) {
+                    return homeScreenKt$HomeScreen$lambda$15$lambda$14$$inlined$items$default$1.invoke(listTake.get(i));
+                }
+            }, ComposableLambdaKt.composableLambdaInstance(-632812321, true, new Function4<LazyItemScope, Integer, Composer, Integer, Unit>() { // from class: com.dubtonic.player.ui.screens.HomeScreenKt$HomeScreen$lambda$15$lambda$14$$inlined$items$default$4
+                /* JADX WARN: 'super' call moved to the top of the method (can break code semantics) */
+                {
+                    super(4);
+                }
+
+                @Override // kotlin.jvm.functions.Function4
+                public /* bridge */ /* synthetic */ Unit invoke(LazyItemScope lazyItemScope, Integer num, Composer composer, Integer num2) {
+                    invoke(lazyItemScope, num.intValue(), composer, num2.intValue());
+                    return Unit.INSTANCE;
+                }
+
+                public final void invoke(LazyItemScope lazyItemScope, int i, Composer composer, int i2) {
+                    int i3;
+                    Song song;
+                    ComposerKt.sourceInformation(composer, "C152@7074L22:LazyDsl.kt#428nma");
+                    if ((i2 & 6) == 0) {
+                        i3 = i2 | (composer.changed(lazyItemScope) ? 4 : 2);
+                    } else {
+                        i3 = i2;
+                    }
+                    if ((i2 & 48) == 0) {
+                        i3 |= composer.changed(i) ? 32 : 16;
+                    }
+                    if ((i3 & 147) == 146 && composer.getSkipping()) {
+                        composer.skipToGroupEnd();
+                        return;
+                    }
+                    if (ComposerKt.isTraceInProgress()) {
+                        ComposerKt.traceEventStart(-632812321, i3, -1, "androidx.compose.foundation.lazy.items.<anonymous> (LazyDsl.kt:152)");
+                    }
+                    final Song song2 = (Song) listTake.get(i);
+                    composer.startReplaceGroup(-1751705096);
+                    String title = song2.getTitle();
+                    String artist = song2.getArtist();
+                    String strHomeScreen$artUrl = HomeScreenKt.HomeScreen$artUrl(serverConfig, libraryRepository, song2.getArtworkKey());
+                    long duration = song2.getDuration();
+                    QueueItem current = HomeScreenKt.HomeScreen$lambda$6(state2).getCurrent();
+                    boolean zAreEqual = Intrinsics.areEqual((current == null || (song = current.getSong()) == null) ? null : song.getId(), song2.getId());
+                    boolean playing = HomeScreenKt.HomeScreen$lambda$6(state2).getPlaying();
+                    boolean zContains = HomeScreenKt.HomeScreen$lambda$5(state).contains(song2.getId());
+                    composer.startReplaceGroup(-1026324263);
+                    boolean zChangedInstance = composer.changedInstance(list) | composer.changed(song2) | composer.changed(z) | composer.changed(function0);
+                    Object objRememberedValue = composer.rememberedValue();
+                    if (zChangedInstance || objRememberedValue == Composer.INSTANCE.getEmpty()) {
+                        final List list3 = list;
+                        final boolean z2 = z;
+                        final Function0 function2 = function0;
+                        objRememberedValue = (Function0) new Function0<Unit>() { // from class: com.dubtonic.player.ui.screens.HomeScreenKt$HomeScreen$1$1$3$1$1
+                            @Override // kotlin.jvm.functions.Function0
+                            public /* bridge */ /* synthetic */ Unit invoke() {
+                                invoke2();
+                                return Unit.INSTANCE;
+                            }
+
+                            /* JADX INFO: renamed from: invoke, reason: avoid collision after fix types in other method */
+                            public final void invoke2() {
+                                PlayerBus playerBus = PlayerBus.INSTANCE;
+                                List<Song> list4 = list3;
+                                playerBus.playQueue(list4, list4.indexOf(song2), z2);
+                                function2.invoke();
+                            }
+                        };
+                        composer.updateRememberedValue(objRememberedValue);
+                    }
+                    Function0 function3 = (Function0) objRememberedValue;
+                    composer.endReplaceGroup();
+                    composer.startReplaceGroup(-1026318243);
+                    boolean zChangedInstance2 = composer.changedInstance(coroutineScope) | composer.changedInstance(appContainer) | composer.changed(song2) | composer.changed(state);
+                    Object objRememberedValue2 = composer.rememberedValue();
+                    if (zChangedInstance2 || objRememberedValue2 == Composer.INSTANCE.getEmpty()) {
+                        final CoroutineScope coroutineScope2 = coroutineScope;
+                        final AppContainer appContainer2 = appContainer;
+                        final State state6 = state;
+                        objRememberedValue2 = (Function0) new Function0<Unit>() { // from class: com.dubtonic.player.ui.screens.HomeScreenKt$HomeScreen$1$1$3$2$1
+
+                            /* JADX INFO: renamed from: com.dubtonic.player.ui.screens.HomeScreenKt$HomeScreen$1$1$3$2$1$1, reason: invalid class name */
+                            /* JADX INFO: compiled from: HomeScreen.kt */
+                            @Metadata(d1 = {"\u0000\n\n\u0000\n\u0002\u0010\u0002\n\u0002\u0018\u0002\u0010\u0000\u001a\u00020\u0001*\u00020\u0002H\n"}, d2 = {"<anonymous>", "", "Lkotlinx/coroutines/CoroutineScope;"}, k = 3, mv = {2, 0, 0}, xi = 48)
+                            @DebugMetadata(c = "com.dubtonic.player.ui.screens.HomeScreenKt$HomeScreen$1$1$3$2$1$1", f = "HomeScreen.kt", i = {}, l = {143}, m = "invokeSuspend", n = {}, s = {})
+                            static final class AnonymousClass1 extends SuspendLambda implements Function2<CoroutineScope, Continuation<? super Unit>, Object> {
+                                final /* synthetic */ AppContainer $container;
+                                final /* synthetic */ Song $song;
+                                final /* synthetic */ State<Set<String>> $starred$delegate;
+                                int label;
+
+                                /* JADX WARN: 'super' call moved to the top of the method (can break code semantics) */
+                                /* JADX WARN: Multi-variable type inference failed */
+                                AnonymousClass1(AppContainer appContainer, Song song, State<? extends Set<String>> state, Continuation<? super AnonymousClass1> continuation) {
+                                    super(2, continuation);
+                                    this.$container = appContainer;
+                                    this.$song = song;
+                                    this.$starred$delegate = state;
+                                }
+
+                                @Override // kotlin.coroutines.jvm.internal.BaseContinuationImpl
+                                public final Continuation<Unit> create(Object obj, Continuation<?> continuation) {
+                                    return new AnonymousClass1(this.$container, this.$song, this.$starred$delegate, continuation);
+                                }
+
+                                @Override // kotlin.jvm.functions.Function2
+                                public final Object invoke(CoroutineScope coroutineScope, Continuation<? super Unit> continuation) {
+                                    return ((AnonymousClass1) create(coroutineScope, continuation)).invokeSuspend(Unit.INSTANCE);
+                                }
+
+                                @Override // kotlin.coroutines.jvm.internal.BaseContinuationImpl
+                                public final Object invokeSuspend(Object obj) {
+                                    Object coroutine_suspended = IntrinsicsKt.getCOROUTINE_SUSPENDED();
+                                    int i = this.label;
+                                    if (i == 0) {
+                                        ResultKt.throwOnFailure(obj);
+                                        this.label = 1;
+                                        if (this.$container.getSettings().setStarred(this.$song.getId(), !HomeScreenKt.HomeScreen$lambda$5(this.$starred$delegate).contains(this.$song.getId()), this) == coroutine_suspended) {
+                                            return coroutine_suspended;
+                                        }
+                                    } else {
+                                        if (i != 1) {
+                                            throw new IllegalStateException("call to 'resume' before 'invoke' with coroutine");
+                                        }
+                                        ResultKt.throwOnFailure(obj);
+                                    }
+                                    return Unit.INSTANCE;
+                                }
+                            }
+
+                            @Override // kotlin.jvm.functions.Function0
+                            public /* bridge */ /* synthetic */ Unit invoke() {
+                                invoke2();
+                                return Unit.INSTANCE;
+                            }
+
+                            /* JADX INFO: renamed from: invoke, reason: avoid collision after fix types in other method */
+                            public final void invoke2() {
+                                BuildersKt__Builders_commonKt.launch$default(coroutineScope2, null, null, new AnonymousClass1(appContainer2, song2, state6, null), 3, null);
+                            }
+                        };
+                        composer.updateRememberedValue(objRememberedValue2);
+                    }
+                    composer.endReplaceGroup();
+                    ComponentsKt.TrackRow(title, artist, strHomeScreen$artUrl, duration, null, zAreEqual, playing, zContains, function3, (Function0) objRememberedValue2, null, null, composer, 24576, 0, 3072);
+                    composer.endReplaceGroup();
+                    if (ComposerKt.isTraceInProgress()) {
+                        ComposerKt.traceEventEnd();
+                    }
+                }
+            }));
+        }
+        albumShelf(LazyColumn, HomeScreen$lambda$1(state3), "Newest", new HomeScreenKt$HomeScreen$1$1$4(serverConfig, libraryRepository), function1, new HomeScreenKt$HomeScreen$1$1$5(coroutineScope, serverConfig, z, function0, libraryRepository));
+        albumShelf(LazyColumn, HomeScreen$lambda$2(state4), "Random picks", new HomeScreenKt$HomeScreen$1$1$6(serverConfig, libraryRepository), function1, new HomeScreenKt$HomeScreen$1$1$7(coroutineScope, serverConfig, z, function0, libraryRepository));
+        if (!list2.isEmpty()) {
+            albumShelf(LazyColumn, new LoadState.Ready(list2), "Recently added", new HomeScreenKt$HomeScreen$1$1$8(serverConfig, libraryRepository), function1, new HomeScreenKt$HomeScreen$1$1$9(coroutineScope, serverConfig, z, function0, libraryRepository));
+        }
+        LoadState<List<Album>> loadStateHomeScreen$lambda$0 = HomeScreen$lambda$0(state5);
+        if (loadStateHomeScreen$lambda$0 instanceof LoadState.Loading) {
+            LazyListScope.item$default(LazyColumn, null, null, ComposableSingletons$HomeScreenKt.INSTANCE.m7057getLambda2$app_release(), 3, null);
+        } else if (loadStateHomeScreen$lambda$0 instanceof LoadState.Failed) {
+            LazyListScope.item$default(LazyColumn, null, null, ComposableSingletons$HomeScreenKt.INSTANCE.m7058getLambda3$app_release(), 3, null);
+        }
+        return Unit.INSTANCE;
+    }
+
+    /* JADX INFO: Access modifiers changed from: private */
+    public static final void FeaturedHero(final Album album, final String str, final Function0<Unit> function0, final Function0<Unit> function1, Composer composer, final int i) {
+        int i2;
+        Composer composerStartRestartGroup = composer.startRestartGroup(1411217818);
+        if ((i & 6) == 0) {
+            i2 = (composerStartRestartGroup.changedInstance(album) ? 4 : 2) | i;
+        } else {
+            i2 = i;
+        }
+        if ((i & 48) == 0) {
+            i2 |= composerStartRestartGroup.changed(str) ? 32 : 16;
+        }
+        if ((i & RendererCapabilities.DECODER_SUPPORT_MASK) == 0) {
+            i2 |= composerStartRestartGroup.changedInstance(function0) ? 256 : 128;
+        }
+        if ((i & 3072) == 0) {
+            i2 |= composerStartRestartGroup.changedInstance(function1) ? 2048 : 1024;
+        }
+        if ((i2 & 1171) != 1170 || !composerStartRestartGroup.getSkipping()) {
+            if (ComposerKt.isTraceInProgress()) {
+                ComposerKt.traceEventStart(1411217818, i2, -1, "com.dubtonic.player.ui.screens.FeaturedHero (HomeScreen.kt:190)");
+            }
+            DubColors colors = DubTheme.INSTANCE.getColors(composerStartRestartGroup, 6);
+            float f = 18;
+            float f2 = 10;
+            Modifier modifierM681padding3ABfNKs = PaddingKt.m681padding3ABfNKs(ClickableKt.m269clickableXHw0xAI$default(BackgroundKt.m236backgroundbw27NRU$default(ClipKt.clip(PaddingKt.m682paddingVpY3zN4(SizeKt.fillMaxWidth$default(Modifier.INSTANCE, 0.0f, 1, null), Dp.m6299constructorimpl(f), Dp.m6299constructorimpl(f2)), RoundedCornerShapeKt.m964RoundedCornerShape0680j_4(DubDimens.INSTANCE.m7170getRadiusMdD9Ej5fM())), colors.m7160getSurface0d7_KjU(), null, 2, null), false, null, null, function0, 7, null), Dp.m6299constructorimpl(16));
+            Alignment.Vertical centerVertically = Alignment.INSTANCE.getCenterVertically();
+            ComposerKt.sourceInformationMarkerStart(composerStartRestartGroup, 693286680, "CC(Row)P(2,1,3)99@5018L58,100@5081L130:Row.kt#2w3rfo");
+            MeasurePolicy measurePolicyRowMeasurePolicy = RowKt.rowMeasurePolicy(Arrangement.INSTANCE.getStart(), centerVertically, composerStartRestartGroup, 48);
+            ComposerKt.sourceInformationMarkerStart(composerStartRestartGroup, -1323940314, "CC(Layout)P(!1,2)79@3208L23,82@3359L411:Layout.kt#80mrfh");
+            int currentCompositeKeyHash = ComposablesKt.getCurrentCompositeKeyHash(composerStartRestartGroup, 0);
+            CompositionLocalMap currentCompositionLocalMap = composerStartRestartGroup.getCurrentCompositionLocalMap();
+            Modifier modifierMaterializeModifier = ComposedModifierKt.materializeModifier(composerStartRestartGroup, modifierM681padding3ABfNKs);
+            Function0<ComposeUiNode> constructor = ComposeUiNode.INSTANCE.getConstructor();
+            ComposerKt.sourceInformationMarkerStart(composerStartRestartGroup, -692256719, "CC(ReusableComposeNode)P(1,2)376@14062L9:Composables.kt#9igjgp");
+            if (!(composerStartRestartGroup.getApplier() instanceof Applier)) {
+                ComposablesKt.invalidApplier();
+            }
+            composerStartRestartGroup.startReusableNode();
+            if (composerStartRestartGroup.getInserting()) {
+                composerStartRestartGroup.createNode(constructor);
+            } else {
+                composerStartRestartGroup.useNode();
+            }
+            Composer composerM3333constructorimpl = Updater.m3333constructorimpl(composerStartRestartGroup);
+            Updater.m3340setimpl(composerM3333constructorimpl, measurePolicyRowMeasurePolicy, ComposeUiNode.INSTANCE.getSetMeasurePolicy());
+            Updater.m3340setimpl(composerM3333constructorimpl, currentCompositionLocalMap, ComposeUiNode.INSTANCE.getSetResolvedCompositionLocals());
+            Function2<ComposeUiNode, Integer, Unit> setCompositeKeyHash = ComposeUiNode.INSTANCE.getSetCompositeKeyHash();
+            if (composerM3333constructorimpl.getInserting() || !Intrinsics.areEqual(composerM3333constructorimpl.rememberedValue(), Integer.valueOf(currentCompositeKeyHash))) {
+                composerM3333constructorimpl.updateRememberedValue(Integer.valueOf(currentCompositeKeyHash));
+                composerM3333constructorimpl.apply(Integer.valueOf(currentCompositeKeyHash), setCompositeKeyHash);
+            }
+            Updater.m3340setimpl(composerM3333constructorimpl, modifierMaterializeModifier, ComposeUiNode.INSTANCE.getSetModifier());
+            ComposerKt.sourceInformationMarkerStart(composerStartRestartGroup, -407840262, "C101@5126L9:Row.kt#2w3rfo");
+            RowScopeInstance rowScopeInstance = RowScopeInstance.INSTANCE;
+            ComponentsKt.m7042ArtworkTN_CM5M(str, album.getName(), Dp.m6299constructorimpl(96), null, null, composerStartRestartGroup, ((i2 >> 3) & 14) | RendererCapabilities.DECODER_SUPPORT_MASK, 24);
+            Modifier modifierM685paddingqDBjuR0$default = PaddingKt.m685paddingqDBjuR0$default(Modifier.INSTANCE, Dp.m6299constructorimpl(14), 0.0f, 0.0f, 0.0f, 14, null);
+            ComposerKt.sourceInformationMarkerStart(composerStartRestartGroup, -483455358, "CC(Column)P(2,3,1)86@4330L61,87@4396L133:Column.kt#2w3rfo");
+            MeasurePolicy measurePolicyColumnMeasurePolicy = ColumnKt.columnMeasurePolicy(Arrangement.INSTANCE.getTop(), Alignment.INSTANCE.getStart(), composerStartRestartGroup, 0);
+            ComposerKt.sourceInformationMarkerStart(composerStartRestartGroup, -1323940314, "CC(Layout)P(!1,2)79@3208L23,82@3359L411:Layout.kt#80mrfh");
+            int currentCompositeKeyHash2 = ComposablesKt.getCurrentCompositeKeyHash(composerStartRestartGroup, 0);
+            CompositionLocalMap currentCompositionLocalMap2 = composerStartRestartGroup.getCurrentCompositionLocalMap();
+            Modifier modifierMaterializeModifier2 = ComposedModifierKt.materializeModifier(composerStartRestartGroup, modifierM685paddingqDBjuR0$default);
+            Function0<ComposeUiNode> constructor2 = ComposeUiNode.INSTANCE.getConstructor();
+            ComposerKt.sourceInformationMarkerStart(composerStartRestartGroup, -692256719, "CC(ReusableComposeNode)P(1,2)376@14062L9:Composables.kt#9igjgp");
+            if (!(composerStartRestartGroup.getApplier() instanceof Applier)) {
+                ComposablesKt.invalidApplier();
+            }
+            composerStartRestartGroup.startReusableNode();
+            if (composerStartRestartGroup.getInserting()) {
+                composerStartRestartGroup.createNode(constructor2);
+            } else {
+                composerStartRestartGroup.useNode();
+            }
+            Composer composerM3333constructorimpl2 = Updater.m3333constructorimpl(composerStartRestartGroup);
+            Updater.m3340setimpl(composerM3333constructorimpl2, measurePolicyColumnMeasurePolicy, ComposeUiNode.INSTANCE.getSetMeasurePolicy());
+            Updater.m3340setimpl(composerM3333constructorimpl2, currentCompositionLocalMap2, ComposeUiNode.INSTANCE.getSetResolvedCompositionLocals());
+            Function2<ComposeUiNode, Integer, Unit> setCompositeKeyHash2 = ComposeUiNode.INSTANCE.getSetCompositeKeyHash();
+            if (composerM3333constructorimpl2.getInserting() || !Intrinsics.areEqual(composerM3333constructorimpl2.rememberedValue(), Integer.valueOf(currentCompositeKeyHash2))) {
+                composerM3333constructorimpl2.updateRememberedValue(Integer.valueOf(currentCompositeKeyHash2));
+                composerM3333constructorimpl2.apply(Integer.valueOf(currentCompositeKeyHash2), setCompositeKeyHash2);
+            }
+            Updater.m3340setimpl(composerM3333constructorimpl2, modifierMaterializeModifier2, ComposeUiNode.INSTANCE.getSetModifier());
+            ComposerKt.sourceInformationMarkerStart(composerStartRestartGroup, -384784025, "C88@4444L9:Column.kt#2w3rfo");
+            ColumnScopeInstance columnScopeInstance = ColumnScopeInstance.INSTANCE;
+            TextKt.m2373Text4IGK_g("FEATURED", (Modifier) null, colors.m7165getTextFaint0d7_KjU(), 0L, (FontStyle) null, (FontWeight) null, (FontFamily) null, 0L, (TextDecoration) null, (TextAlign) null, 0L, 0, false, 0, 0, (Function1<? super TextLayoutResult, Unit>) null, MaterialTheme.INSTANCE.getTypography(composerStartRestartGroup, MaterialTheme.$stable).getLabelLarge(), composerStartRestartGroup, 6, 0, 65530);
+            SpacerKt.Spacer(SizeKt.m712height3ABfNKs(Modifier.INSTANCE, Dp.m6299constructorimpl(4)), composerStartRestartGroup, 6);
+            TextKt.m2373Text4IGK_g(album.getName(), (Modifier) null, colors.m7164getText0d7_KjU(), 0L, (FontStyle) null, (FontWeight) null, (FontFamily) null, 0L, (TextDecoration) null, (TextAlign) null, 0L, TextOverflow.INSTANCE.m6238getEllipsisgIe3tQ8(), false, 2, 0, (Function1<? super TextLayoutResult, Unit>) null, MaterialTheme.INSTANCE.getTypography(composerStartRestartGroup, MaterialTheme.$stable).getTitleLarge(), composerStartRestartGroup, 0, 3120, 55290);
+            TextKt.m2373Text4IGK_g(album.getArtist(), (Modifier) null, colors.m7166getTextSoft0d7_KjU(), 0L, (FontStyle) null, (FontWeight) null, (FontFamily) null, 0L, (TextDecoration) null, (TextAlign) null, 0L, TextOverflow.INSTANCE.m6238getEllipsisgIe3tQ8(), false, 1, 0, (Function1<? super TextLayoutResult, Unit>) null, MaterialTheme.INSTANCE.getTypography(composerStartRestartGroup, MaterialTheme.$stable).getBodyMedium(), composerStartRestartGroup, 0, 3120, 55290);
+            SpacerKt.Spacer(SizeKt.m712height3ABfNKs(Modifier.INSTANCE, Dp.m6299constructorimpl(f2)), composerStartRestartGroup, 6);
+            Alignment.Vertical centerVertically2 = Alignment.INSTANCE.getCenterVertically();
+            ComposerKt.sourceInformationMarkerStart(composerStartRestartGroup, 693286680, "CC(Row)P(2,1,3)99@5018L58,100@5081L130:Row.kt#2w3rfo");
+            Modifier.Companion companion = Modifier.INSTANCE;
+            MeasurePolicy measurePolicyRowMeasurePolicy2 = RowKt.rowMeasurePolicy(Arrangement.INSTANCE.getStart(), centerVertically2, composerStartRestartGroup, 48);
+            ComposerKt.sourceInformationMarkerStart(composerStartRestartGroup, -1323940314, "CC(Layout)P(!1,2)79@3208L23,82@3359L411:Layout.kt#80mrfh");
+            int currentCompositeKeyHash3 = ComposablesKt.getCurrentCompositeKeyHash(composerStartRestartGroup, 0);
+            CompositionLocalMap currentCompositionLocalMap3 = composerStartRestartGroup.getCurrentCompositionLocalMap();
+            Modifier modifierMaterializeModifier3 = ComposedModifierKt.materializeModifier(composerStartRestartGroup, companion);
+            Function0<ComposeUiNode> constructor3 = ComposeUiNode.INSTANCE.getConstructor();
+            ComposerKt.sourceInformationMarkerStart(composerStartRestartGroup, -692256719, "CC(ReusableComposeNode)P(1,2)376@14062L9:Composables.kt#9igjgp");
+            if (!(composerStartRestartGroup.getApplier() instanceof Applier)) {
+                ComposablesKt.invalidApplier();
+            }
+            composerStartRestartGroup.startReusableNode();
+            if (composerStartRestartGroup.getInserting()) {
+                composerStartRestartGroup.createNode(constructor3);
+            } else {
+                composerStartRestartGroup.useNode();
+            }
+            Composer composerM3333constructorimpl3 = Updater.m3333constructorimpl(composerStartRestartGroup);
+            Updater.m3340setimpl(composerM3333constructorimpl3, measurePolicyRowMeasurePolicy2, ComposeUiNode.INSTANCE.getSetMeasurePolicy());
+            Updater.m3340setimpl(composerM3333constructorimpl3, currentCompositionLocalMap3, ComposeUiNode.INSTANCE.getSetResolvedCompositionLocals());
+            Function2<ComposeUiNode, Integer, Unit> setCompositeKeyHash3 = ComposeUiNode.INSTANCE.getSetCompositeKeyHash();
+            if (composerM3333constructorimpl3.getInserting() || !Intrinsics.areEqual(composerM3333constructorimpl3.rememberedValue(), Integer.valueOf(currentCompositeKeyHash3))) {
+                composerM3333constructorimpl3.updateRememberedValue(Integer.valueOf(currentCompositeKeyHash3));
+                composerM3333constructorimpl3.apply(Integer.valueOf(currentCompositeKeyHash3), setCompositeKeyHash3);
+            }
+            Updater.m3340setimpl(composerM3333constructorimpl3, modifierMaterializeModifier3, ComposeUiNode.INSTANCE.getSetModifier());
+            ComposerKt.sourceInformationMarkerStart(composerStartRestartGroup, -407840262, "C101@5126L9:Row.kt#2w3rfo");
+            RowScopeInstance rowScopeInstance2 = RowScopeInstance.INSTANCE;
+            Modifier modifierM269clickableXHw0xAI$default = ClickableKt.m269clickableXHw0xAI$default(BackgroundKt.m236backgroundbw27NRU$default(ClipKt.clip(SizeKt.m726size3ABfNKs(Modifier.INSTANCE, Dp.m6299constructorimpl(40)), RoundedCornerShapeKt.getCircleShape()), colors.m7155getSecondary0d7_KjU(), null, 2, null), false, null, null, function1, 7, null);
+            Alignment center = Alignment.INSTANCE.getCenter();
+            ComposerKt.sourceInformationMarkerStart(composerStartRestartGroup, 733328855, "CC(Box)P(2,1,3)72@3384L130:Box.kt#2w3rfo");
+            MeasurePolicy measurePolicyMaybeCachedBoxMeasurePolicy = BoxKt.maybeCachedBoxMeasurePolicy(center, false);
+            ComposerKt.sourceInformationMarkerStart(composerStartRestartGroup, -1323940314, "CC(Layout)P(!1,2)79@3208L23,82@3359L411:Layout.kt#80mrfh");
+            int currentCompositeKeyHash4 = ComposablesKt.getCurrentCompositeKeyHash(composerStartRestartGroup, 0);
+            CompositionLocalMap currentCompositionLocalMap4 = composerStartRestartGroup.getCurrentCompositionLocalMap();
+            Modifier modifierMaterializeModifier4 = ComposedModifierKt.materializeModifier(composerStartRestartGroup, modifierM269clickableXHw0xAI$default);
+            Function0<ComposeUiNode> constructor4 = ComposeUiNode.INSTANCE.getConstructor();
+            ComposerKt.sourceInformationMarkerStart(composerStartRestartGroup, -692256719, "CC(ReusableComposeNode)P(1,2)376@14062L9:Composables.kt#9igjgp");
+            if (!(composerStartRestartGroup.getApplier() instanceof Applier)) {
+                ComposablesKt.invalidApplier();
+            }
+            composerStartRestartGroup.startReusableNode();
+            if (composerStartRestartGroup.getInserting()) {
+                composerStartRestartGroup.createNode(constructor4);
+            } else {
+                composerStartRestartGroup.useNode();
+            }
+            Composer composerM3333constructorimpl4 = Updater.m3333constructorimpl(composerStartRestartGroup);
+            Updater.m3340setimpl(composerM3333constructorimpl4, measurePolicyMaybeCachedBoxMeasurePolicy, ComposeUiNode.INSTANCE.getSetMeasurePolicy());
+            Updater.m3340setimpl(composerM3333constructorimpl4, currentCompositionLocalMap4, ComposeUiNode.INSTANCE.getSetResolvedCompositionLocals());
+            Function2<ComposeUiNode, Integer, Unit> setCompositeKeyHash4 = ComposeUiNode.INSTANCE.getSetCompositeKeyHash();
+            if (composerM3333constructorimpl4.getInserting() || !Intrinsics.areEqual(composerM3333constructorimpl4.rememberedValue(), Integer.valueOf(currentCompositeKeyHash4))) {
+                composerM3333constructorimpl4.updateRememberedValue(Integer.valueOf(currentCompositeKeyHash4));
+                composerM3333constructorimpl4.apply(Integer.valueOf(currentCompositeKeyHash4), setCompositeKeyHash4);
+            }
+            Updater.m3340setimpl(composerM3333constructorimpl4, modifierMaterializeModifier4, ComposeUiNode.INSTANCE.getSetModifier());
+            ComposerKt.sourceInformationMarkerStart(composerStartRestartGroup, -2146769399, "C73@3429L9:Box.kt#2w3rfo");
+            BoxScopeInstance boxScopeInstance = BoxScopeInstance.INSTANCE;
+            IconKt.m1830Iconww6aTOc(PlayArrowKt.getPlayArrow(Icons.Rounded.INSTANCE), "Play", SizeKt.m726size3ABfNKs(Modifier.INSTANCE, Dp.m6299constructorimpl(24)), colors.m7149getOnSecondary0d7_KjU(), composerStartRestartGroup, 432, 0);
+            ComposerKt.sourceInformationMarkerEnd(composerStartRestartGroup);
+            composerStartRestartGroup.endNode();
+            ComposerKt.sourceInformationMarkerEnd(composerStartRestartGroup);
+            ComposerKt.sourceInformationMarkerEnd(composerStartRestartGroup);
+            ComposerKt.sourceInformationMarkerEnd(composerStartRestartGroup);
+            SpacerKt.Spacer(SizeKt.m731width3ABfNKs(Modifier.INSTANCE, Dp.m6299constructorimpl(f2)), composerStartRestartGroup, 6);
+            IconKt.m1830Iconww6aTOc(ShuffleKt.getShuffle(Icons.Rounded.INSTANCE), "Shuffle", SizeKt.m726size3ABfNKs(Modifier.INSTANCE, Dp.m6299constructorimpl(f)), colors.m7166getTextSoft0d7_KjU(), composerStartRestartGroup, 432, 0);
+            SpacerKt.Spacer(SizeKt.m731width3ABfNKs(Modifier.INSTANCE, Dp.m6299constructorimpl(6)), composerStartRestartGroup, 6);
+            TextKt.m2373Text4IGK_g("Shuffle", (Modifier) null, colors.m7166getTextSoft0d7_KjU(), 0L, (FontStyle) null, (FontWeight) null, (FontFamily) null, 0L, (TextDecoration) null, (TextAlign) null, 0L, 0, false, 0, 0, (Function1<? super TextLayoutResult, Unit>) null, MaterialTheme.INSTANCE.getTypography(composerStartRestartGroup, MaterialTheme.$stable).getBodyMedium(), composerStartRestartGroup, 6, 0, 65530);
+            ComposerKt.sourceInformationMarkerEnd(composerStartRestartGroup);
+            composerStartRestartGroup.endNode();
+            ComposerKt.sourceInformationMarkerEnd(composerStartRestartGroup);
+            ComposerKt.sourceInformationMarkerEnd(composerStartRestartGroup);
+            ComposerKt.sourceInformationMarkerEnd(composerStartRestartGroup);
+            ComposerKt.sourceInformationMarkerEnd(composerStartRestartGroup);
+            composerStartRestartGroup.endNode();
+            ComposerKt.sourceInformationMarkerEnd(composerStartRestartGroup);
+            ComposerKt.sourceInformationMarkerEnd(composerStartRestartGroup);
+            ComposerKt.sourceInformationMarkerEnd(composerStartRestartGroup);
+            ComposerKt.sourceInformationMarkerEnd(composerStartRestartGroup);
+            composerStartRestartGroup.endNode();
+            ComposerKt.sourceInformationMarkerEnd(composerStartRestartGroup);
+            ComposerKt.sourceInformationMarkerEnd(composerStartRestartGroup);
+            ComposerKt.sourceInformationMarkerEnd(composerStartRestartGroup);
+            if (ComposerKt.isTraceInProgress()) {
+                ComposerKt.traceEventEnd();
+            }
+        } else {
+            composerStartRestartGroup.skipToGroupEnd();
+        }
+        ScopeUpdateScope scopeUpdateScopeEndRestartGroup = composerStartRestartGroup.endRestartGroup();
+        if (scopeUpdateScopeEndRestartGroup != null) {
+            scopeUpdateScopeEndRestartGroup.updateScope(new Function2() { // from class: com.dubtonic.player.ui.screens.HomeScreenKt$$ExternalSyntheticLambda0
+                @Override // kotlin.jvm.functions.Function2
+                public final Object invoke(Object obj, Object obj2) {
+                    return HomeScreenKt.FeaturedHero$lambda$21(album, str, function0, function1, i, (Composer) obj, ((Integer) obj2).intValue());
+                }
+            });
+        }
+    }
+
+    private static final void albumShelf(LazyListScope lazyListScope, LoadState<? extends List<Album>> loadState, final String str, Function1<? super String, String> function1, Function1<? super String, Unit> function2, Function1<? super Album, Unit> function3) {
+        LoadState.Ready ready = loadState instanceof LoadState.Ready ? (LoadState.Ready) loadState : null;
+        List listEmptyList = ready != null ? (List) ready.getValue() : null;
+        if (listEmptyList == null) {
+            listEmptyList = CollectionsKt.emptyList();
+        }
+        if (listEmptyList.isEmpty()) {
+            return;
+        }
+        LazyListScope.item$default(lazyListScope, null, null, ComposableLambdaKt.composableLambdaInstance(1582725029, true, new Function3<LazyItemScope, Composer, Integer, Unit>() { // from class: com.dubtonic.player.ui.screens.HomeScreenKt.albumShelf.1
+            @Override // kotlin.jvm.functions.Function3
+            public /* bridge */ /* synthetic */ Unit invoke(LazyItemScope lazyItemScope, Composer composer, Integer num) {
+                invoke(lazyItemScope, composer, num.intValue());
+                return Unit.INSTANCE;
+            }
+
+            public final void invoke(LazyItemScope item, Composer composer, int i) {
+                Intrinsics.checkNotNullParameter(item, "$this$item");
+                if ((i & 17) == 16 && composer.getSkipping()) {
+                    composer.skipToGroupEnd();
+                    return;
+                }
+                if (ComposerKt.isTraceInProgress()) {
+                    ComposerKt.traceEventStart(1582725029, i, -1, "com.dubtonic.player.ui.screens.albumShelf.<anonymous> (HomeScreen.kt:268)");
+                }
+                ComponentsKt.SectionHeader(str, null, null, composer, 0, 6);
+                if (ComposerKt.isTraceInProgress()) {
+                    ComposerKt.traceEventEnd();
+                }
+            }
+        }), 3, null);
+        LazyListScope.item$default(lazyListScope, null, null, ComposableLambdaKt.composableLambdaInstance(998936718, true, new AnonymousClass2(listEmptyList, function1, function2)), 3, null);
+    }
+
+    /* JADX INFO: renamed from: com.dubtonic.player.ui.screens.HomeScreenKt$albumShelf$2, reason: invalid class name */
+    /* JADX INFO: compiled from: HomeScreen.kt */
+    @Metadata(k = 3, mv = {2, 0, 0}, xi = 48)
+    static final class AnonymousClass2 implements Function3<LazyItemScope, Composer, Integer, Unit> {
+        final /* synthetic */ List<Album> $albums;
+        final /* synthetic */ Function1<String, String> $artUrl;
+        final /* synthetic */ Function1<String, Unit> $onOpenAlbum;
+
+        /* JADX WARN: Multi-variable type inference failed */
+        AnonymousClass2(List<Album> list, Function1<? super String, String> function1, Function1<? super String, Unit> function2) {
+            this.$albums = list;
+            this.$artUrl = function1;
+            this.$onOpenAlbum = function2;
+        }
+
+        @Override // kotlin.jvm.functions.Function3
+        public /* bridge */ /* synthetic */ Unit invoke(LazyItemScope lazyItemScope, Composer composer, Integer num) {
+            invoke(lazyItemScope, composer, num.intValue());
+            return Unit.INSTANCE;
+        }
+
+        public final void invoke(LazyItemScope item, Composer composer, int i) {
+            Intrinsics.checkNotNullParameter(item, "$this$item");
+            if ((i & 17) != 16 || !composer.getSkipping()) {
+                if (ComposerKt.isTraceInProgress()) {
+                    ComposerKt.traceEventStart(998936718, i, -1, "com.dubtonic.player.ui.screens.albumShelf.<anonymous> (HomeScreen.kt:270)");
+                }
+                PaddingValues paddingValuesM676PaddingValuesYgX7TsA$default = PaddingKt.m676PaddingValuesYgX7TsA$default(Dp.m6299constructorimpl(8), 0.0f, 2, null);
+                Arrangement.HorizontalOrVertical horizontalOrVerticalM561spacedBy0680j_4 = Arrangement.INSTANCE.m561spacedBy0680j_4(Dp.m6299constructorimpl(6));
+                composer.startReplaceGroup(-350397951);
+                boolean zChangedInstance = composer.changedInstance(this.$albums) | composer.changed(this.$artUrl) | composer.changed(this.$onOpenAlbum);
+                final List<Album> list = this.$albums;
+                final Function1<String, String> function1 = this.$artUrl;
+                final Function1<String, Unit> function2 = this.$onOpenAlbum;
+                Object objRememberedValue = composer.rememberedValue();
+                if (zChangedInstance || objRememberedValue == Composer.INSTANCE.getEmpty()) {
+                    objRememberedValue = new Function1() { // from class: com.dubtonic.player.ui.screens.HomeScreenKt$albumShelf$2$$ExternalSyntheticLambda0
+                        @Override // kotlin.jvm.functions.Function1
+                        public final Object invoke(Object obj) {
+                            return HomeScreenKt.AnonymousClass2.invoke$lambda$4$lambda$3(list, function1, function2, (LazyListScope) obj);
+                        }
+                    };
+                    composer.updateRememberedValue(objRememberedValue);
+                }
+                composer.endReplaceGroup();
+                LazyDslKt.LazyRow(null, null, paddingValuesM676PaddingValuesYgX7TsA$default, false, horizontalOrVerticalM561spacedBy0680j_4, null, null, false, (Function1) objRememberedValue, composer, 24960, 235);
+                if (ComposerKt.isTraceInProgress()) {
+                    ComposerKt.traceEventEnd();
+                    return;
+                }
+                return;
+            }
+            composer.skipToGroupEnd();
+        }
+
+        /* JADX INFO: Access modifiers changed from: private */
+        public static final Unit invoke$lambda$4$lambda$3(final List list, final Function1 function1, final Function1 function2, LazyListScope LazyRow) {
+            Intrinsics.checkNotNullParameter(LazyRow, "$this$LazyRow");
+            final Function1 function3 = new Function1() { // from class: com.dubtonic.player.ui.screens.HomeScreenKt$albumShelf$2$$ExternalSyntheticLambda1
+                @Override // kotlin.jvm.functions.Function1
+                public final Object invoke(Object obj) {
+                    return HomeScreenKt.AnonymousClass2.invoke$lambda$4$lambda$3$lambda$0((Album) obj);
+                }
+            };
+            final HomeScreenKt$albumShelf$2$invoke$lambda$4$lambda$3$$inlined$items$default$1 homeScreenKt$albumShelf$2$invoke$lambda$4$lambda$3$$inlined$items$default$1 = new Function1() { // from class: com.dubtonic.player.ui.screens.HomeScreenKt$albumShelf$2$invoke$lambda$4$lambda$3$$inlined$items$default$1
+                @Override // kotlin.jvm.functions.Function1
+                public final Void invoke(Album album) {
+                    return null;
+                }
+
+                @Override // kotlin.jvm.functions.Function1
+                public /* bridge */ /* synthetic */ Object invoke(Object obj) {
+                    return invoke((Album) obj);
+                }
+            };
+            LazyRow.items(list.size(), new Function1<Integer, Object>() { // from class: com.dubtonic.player.ui.screens.HomeScreenKt$albumShelf$2$invoke$lambda$4$lambda$3$$inlined$items$default$2
+                /* JADX WARN: 'super' call moved to the top of the method (can break code semantics) */
+                {
+                    super(1);
+                }
+
+                @Override // kotlin.jvm.functions.Function1
+                public /* bridge */ /* synthetic */ Object invoke(Integer num) {
+                    return invoke(num.intValue());
+                }
+
+                public final Object invoke(int i) {
+                    return function3.invoke(list.get(i));
+                }
+            }, new Function1<Integer, Object>() { // from class: com.dubtonic.player.ui.screens.HomeScreenKt$albumShelf$2$invoke$lambda$4$lambda$3$$inlined$items$default$3
+                /* JADX WARN: 'super' call moved to the top of the method (can break code semantics) */
+                {
+                    super(1);
+                }
+
+                @Override // kotlin.jvm.functions.Function1
+                public /* bridge */ /* synthetic */ Object invoke(Integer num) {
+                    return invoke(num.intValue());
+                }
+
+                public final Object invoke(int i) {
+                    return homeScreenKt$albumShelf$2$invoke$lambda$4$lambda$3$$inlined$items$default$1.invoke(list.get(i));
+                }
+            }, ComposableLambdaKt.composableLambdaInstance(-632812321, true, new Function4<LazyItemScope, Integer, Composer, Integer, Unit>() { // from class: com.dubtonic.player.ui.screens.HomeScreenKt$albumShelf$2$invoke$lambda$4$lambda$3$$inlined$items$default$4
+                /* JADX WARN: 'super' call moved to the top of the method (can break code semantics) */
+                {
+                    super(4);
+                }
+
+                @Override // kotlin.jvm.functions.Function4
+                public /* bridge */ /* synthetic */ Unit invoke(LazyItemScope lazyItemScope, Integer num, Composer composer, Integer num2) {
+                    invoke(lazyItemScope, num.intValue(), composer, num2.intValue());
+                    return Unit.INSTANCE;
+                }
+
+                public final void invoke(LazyItemScope lazyItemScope, int i, Composer composer, int i2) {
+                    int i3;
+                    ComposerKt.sourceInformation(composer, "C152@7074L22:LazyDsl.kt#428nma");
+                    if ((i2 & 6) == 0) {
+                        i3 = (composer.changed(lazyItemScope) ? 4 : 2) | i2;
+                    } else {
+                        i3 = i2;
+                    }
+                    if ((i2 & 48) == 0) {
+                        i3 |= composer.changed(i) ? 32 : 16;
+                    }
+                    if ((i3 & 147) == 146 && composer.getSkipping()) {
+                        composer.skipToGroupEnd();
+                        return;
+                    }
+                    if (ComposerKt.isTraceInProgress()) {
+                        ComposerKt.traceEventStart(-632812321, i3, -1, "androidx.compose.foundation.lazy.items.<anonymous> (LazyDsl.kt:152)");
+                    }
+                    final Album album = (Album) list.get(i);
+                    composer.startReplaceGroup(1396128805);
+                    String name = album.getName();
+                    String artist = album.getArtist();
+                    String str = (String) function1.invoke(album.getArtworkKey());
+                    float fM6299constructorimpl = Dp.m6299constructorimpl(118);
+                    composer.startReplaceGroup(1153422089);
+                    boolean zChanged = composer.changed(function2) | composer.changedInstance(album);
+                    Object objRememberedValue = composer.rememberedValue();
+                    if (zChanged || objRememberedValue == Composer.INSTANCE.getEmpty()) {
+                        final Function1 function4 = function2;
+                        objRememberedValue = (Function0) new Function0<Unit>() { // from class: com.dubtonic.player.ui.screens.HomeScreenKt$albumShelf$2$1$1$2$1$1
+                            @Override // kotlin.jvm.functions.Function0
+                            public /* bridge */ /* synthetic */ Unit invoke() {
+                                invoke2();
+                                return Unit.INSTANCE;
+                            }
+
+                            /* JADX INFO: renamed from: invoke, reason: avoid collision after fix types in other method */
+                            public final void invoke2() {
+                                function4.invoke(album.getId());
+                            }
+                        };
+                        composer.updateRememberedValue(objRememberedValue);
+                    }
+                    composer.endReplaceGroup();
+                    ComponentsKt.m7044MediaCardwNmHvu0(name, artist, str, fM6299constructorimpl, null, 0.0f, (Function0) objRememberedValue, composer, 3072, 48);
+                    composer.endReplaceGroup();
+                    if (ComposerKt.isTraceInProgress()) {
+                        ComposerKt.traceEventEnd();
+                    }
+                }
+            }));
+            return Unit.INSTANCE;
+        }
+
+        /* JADX INFO: Access modifiers changed from: private */
+        public static final Object invoke$lambda$4$lambda$3$lambda$0(Album it) {
+            Intrinsics.checkNotNullParameter(it, "it");
+            return it.getId();
+        }
+    }
+
+    private static final LoadState<List<Album>> HomeScreen$lambda$0(State<? extends LoadState<? extends List<Album>>> state) {
+        return (LoadState) state.getValue();
+    }
+
+    private static final LoadState<List<Album>> HomeScreen$lambda$1(State<? extends LoadState<? extends List<Album>>> state) {
+        return (LoadState) state.getValue();
+    }
+
+    private static final LoadState<List<Album>> HomeScreen$lambda$2(State<? extends LoadState<? extends List<Album>>> state) {
+        return (LoadState) state.getValue();
+    }
+
+    private static final LoadState<List<Song>> HomeScreen$lambda$3(State<? extends LoadState<? extends List<Song>>> state) {
+        return (LoadState) state.getValue();
+    }
+
+    private static final List<String> HomeScreen$lambda$4(State<? extends List<String>> state) {
+        return state.getValue();
+    }
+
+    /* JADX INFO: Access modifiers changed from: private */
+    public static final Set<String> HomeScreen$lambda$5(State<? extends Set<String>> state) {
+        return state.getValue();
+    }
+
+    /* JADX INFO: Access modifiers changed from: private */
+    public static final PlayerUiState HomeScreen$lambda$6(State<PlayerUiState> state) {
+        return state.getValue();
+    }
+}
