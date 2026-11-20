@@ -1,0 +1,25 @@
+# Gradle
+.gradle/
+.gradle-home/
+.kotlin/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+
+# Local machine config (sdk.dir, demo server credentials)
+local.properties
+
+# Harness / agent working files
+.harness/
+.tmp/
+*.log
+
+# IDE
+.idea/
+*.iml
+captures/
+
+# Signing
+*.jks
+*.keystore
+*.p12
+keystore.properties
