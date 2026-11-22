@@ -49,6 +49,30 @@ object PlayerIcons {
         icon("Check", "M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z")
     }
 
+    val Smartphone: ImageVector by lazy {
+        icon(
+            "Smartphone",
+            "M17 1H7c-1.1 0-2 .9-2 2v18c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V3c0-1.1-.9-2-2-2z" +
+                "m0 18H7V5h10v14z"
+        )
+    }
+
+    val Queue: ImageVector by lazy {
+        icon(
+            "Queue",
+            "M15 6H3v2h12V6zm0 4H3v2h12v-2zM3 16h8v-2H3v2zM17 6v8.18c-.31-.11-.65-.18-1-.18" +
+                "-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3V8h3V6h-5z"
+        )
+    }
+
+    val Lyrics: ImageVector by lazy {
+        icon(
+            "Lyrics",
+            "M20 4v12H5.17L4 17.17V4h16m0-2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4" +
+                "c0-1.1-.9-2-2-2z"
+        )
+    }
+
     private fun icon(name: String, pathData: String): ImageVector =
         ImageVector.Builder(
             name = name,
