@@ -8,6 +8,7 @@ import com.androidharness.musicplayer.data.remote.SubsonicSession
 import com.androidharness.musicplayer.data.settings.UiSettings
 import com.androidharness.musicplayer.domain.repository.MusicRepository
 import com.androidharness.musicplayer.domain.repository.SettingsRepository
+import com.androidharness.musicplayer.playback.audio.AudioLevelTap
 import com.androidharness.musicplayer.ui.image.AlbumColors
 import com.androidharness.musicplayer.ui.image.AlbumPaletteRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -30,12 +31,16 @@ class PlayerViewModel @Inject constructor(
     private val repository: MusicRepository,
     paletteRepository: AlbumPaletteRepository,
     settingsRepository: SettingsRepository,
+    private val audioLevelTap: AudioLevelTap,
     credentials: SubsonicCredentialsStore,
 ) : ViewModel() {
 
     val session: StateFlow<SubsonicSession?> = credentials.session
 
     val playback: StateFlow<PlaybackUiState> = connection.state
+
+    /** Live per-band energy from the audio pipeline, for the beat visualiser. */
+    val levels: StateFlow<FloatArray> = audioLevelTap.levels
 
     val colors: StateFlow<AlbumColors> = connection.state
         .map { it.artworkUri }

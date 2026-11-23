@@ -13,9 +13,11 @@ import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import com.androidharness.musicplayer.core.model.Track
 import com.androidharness.musicplayer.data.connectivity.ConnectivityMonitor
 import com.androidharness.musicplayer.domain.repository.SettingsRepository
+import com.androidharness.musicplayer.playback.audio.AudioLevelTap
 import com.androidharness.musicplayer.playback.audio.DspRenderersFactory
 import com.androidharness.musicplayer.playback.audio.ParametricEqProcessor
 import com.androidharness.musicplayer.playback.audio.ReplayGainController
+import com.androidharness.musicplayer.playback.audio.VisualizerProcessor
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -35,6 +37,7 @@ class PlaybackEngine @Inject constructor(
     private val settings: SettingsRepository,
     private val connectivity: ConnectivityMonitor,
     private val replayGain: ReplayGainController,
+    private val audioLevelTap: AudioLevelTap,
     private val dataSourceFactory: DataSource.Factory,
     private val streamFallback: StreamPlaybackFallback,
 ) {
@@ -64,7 +67,7 @@ class PlaybackEngine @Inject constructor(
 
         val renderers = DspRenderersFactory(
             context,
-            listOf(replayGain.newProcessor(), equalizer),
+            listOf(replayGain.newProcessor(), equalizer, VisualizerProcessor(audioLevelTap)),
         ).setEnableAudioFloatOutput(true)
 
         val mediaSourceFactory = DefaultMediaSourceFactory(context)
