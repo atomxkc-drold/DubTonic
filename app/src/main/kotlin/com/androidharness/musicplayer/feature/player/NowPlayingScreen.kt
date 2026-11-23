@@ -132,7 +132,7 @@ fun NowPlayingScreen(
         Column(
             Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()
                 .padding(horizontal = 24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
+            horizontalAlignment = Alignment.Start,
         ) {
             Row(Modifier.fillMaxWidth().height(52.dp), verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = onBack) {
@@ -154,7 +154,7 @@ fun NowPlayingScreen(
                 fontSize = 21.sp,
                 fontWeight = FontWeight.SemiBold,
                 lineHeight = 26.sp,
-                textAlign = TextAlign.Center,
+                textAlign = TextAlign.Start,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -165,7 +165,7 @@ fun NowPlayingScreen(
                 text = subtitle(playback.artist, playback.album),
                 color = Color.White.copy(alpha = 0.62f),
                 fontSize = 13.sp,
-                textAlign = TextAlign.Center,
+                textAlign = TextAlign.Start,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -350,15 +350,20 @@ private fun BoxScope.ArtworkBackdrop(uri: Uri?) {
             contentScale = ContentScale.Crop,
             modifier = Modifier.fillMaxSize(),
         )
-        // Feather the bottom edge into the reflection below.
+        // Feather the bottom edge into the blurred reflection below. The wash is layered over
+        // the artwork and blurred so the cover melts into the reflection instead of ending on a
+        // straight line.
         Box(
-            Modifier.fillMaxSize().background(
-                Brush.verticalGradient(
-                    0.55f to Color.Transparent,
-                    0.82f to Color.Black.copy(alpha = 0.45f),
-                    1f to Color.Black,
+            Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.verticalGradient(
+                        0f to Color.Transparent,
+                        0.35f to Color.Black.copy(alpha = 0.32f),
+                        1f to Color.Black,
+                    )
                 )
-            )
+                .blur(18.dp),
         )
     }
 }
@@ -383,16 +388,28 @@ private fun QualityLine(track: Track?, accent: Color) {
     }
     if (parts.isEmpty()) return
 
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Box(Modifier.size(7.dp).clip(CircleShape).background(accent))
-        Spacer(Modifier.width(8.dp))
-        Text(
-            text = parts.joinToString(" · "),
-            color = accent,
-            fontSize = 11.sp,
-            fontFamily = FontFamily.Monospace,
-            textAlign = TextAlign.Center,
-        )
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Start) {
+        if (quality == AudioQuality.UNKNOWN) {
+            Text(
+                text = parts.joinToString(" · "),
+                color = accent,
+                fontSize = 11.sp,
+                fontFamily = FontFamily.Monospace,
+                textAlign = TextAlign.Start,
+            )
+        } else {
+            QualityBadge(quality)
+            if (parts.size > 1) {
+                Spacer(Modifier.width(6.dp))
+                Text(
+                    text = parts.drop(1).joinToString(" · "),
+                    color = Color.White.copy(alpha = 0.6f),
+                    fontSize = 11.sp,
+                    fontFamily = FontFamily.Monospace,
+                    textAlign = TextAlign.Start,
+                )
+            }
+        }
     }
 }
 

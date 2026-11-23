@@ -97,6 +97,13 @@ object PlayerIcons {
         )
     }
 
+    val Waveform: ImageVector by lazy {
+        icon(
+            "Waveform",
+            "M4 10h2v8H4v-8zm4-6h2v14H8V4zm4 3h2v11h-2V7zm4-4h2v18h-2V3zm4 8h2v10h-2V11z"
+        )
+    }
+
     private fun icon(name: String, pathData: String): ImageVector =
         ImageVector.Builder(
             name = name,
