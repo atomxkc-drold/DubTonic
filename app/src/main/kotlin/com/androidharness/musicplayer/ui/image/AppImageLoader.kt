@@ -1,13 +1,16 @@
 package com.androidharness.musicplayer.ui.image
 
 import android.content.Context
+import android.graphics.Bitmap
 import android.net.Uri
 import coil3.ImageLoader
 import coil3.disk.DiskCache
 import coil3.memory.MemoryCache
 import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import coil3.request.ImageRequest
+import coil3.request.SuccessResult
 import coil3.request.crossfade
+import coil3.toBitmap
 import com.androidharness.musicplayer.core.di.NetworkModule
 import com.androidharness.musicplayer.domain.repository.SettingsRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -55,6 +58,12 @@ class AppImageLoader @Inject constructor(
         // Subsonic servers usually send no cache directives for artwork, so Coil keeps it.
         .crossfade(220)
         .build()
+
+    /** Bitmap for the media notification, through the same authenticated client. */
+    suspend fun bitmapFor(uri: Uri, size: Int = 512): Bitmap? =
+        (loader.execute(ImageRequest.Builder(context).data(uri).size(size).build()) as? SuccessResult)
+            ?.image
+            ?.toBitmap()
 
     fun preload(uri: Uri?) {
         if (uri == null) return

@@ -23,6 +23,9 @@ import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
+import java.util.concurrent.Executor
+import java.util.concurrent.Executors
+import java.util.concurrent.ExecutorService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -44,6 +47,8 @@ class PlaybackService : MediaLibraryService() {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val playerScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+    // BitmapLoader's contract is synchronous, so artwork is decoded off the main thread.
+    private val artworkExecutor: ExecutorService = Executors.newSingleThreadExecutor()
     private lateinit var librarySession: MediaLibrarySession
 
     private val playerListener = object : Player.Listener {
@@ -86,6 +91,7 @@ class PlaybackService : MediaLibraryService() {
 
         librarySession = MediaLibrarySession.Builder(this, engine.player, libraryCallback)
             .setSessionActivity(openAppIntent())
+            .setBitmapLoader(SubsonicBitmapLoader(imageLoader, artworkExecutor))
             .build()
 
         setMediaNotificationProvider(
@@ -113,6 +119,7 @@ class PlaybackService : MediaLibraryService() {
         engine.player.removeListener(playerListener)
         if (::librarySession.isInitialized) librarySession.release()
         crossfade.release()
+        artworkExecutor.shutdown()
         playerScope.cancel()
         scope.cancel()
         engine.release()
