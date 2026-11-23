@@ -72,6 +72,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.androidharness.musicplayer.ui.motion.motionBlurScroll
 import coil3.compose.AsyncImage
 import com.androidharness.musicplayer.feature.player.MiniPlayer
 import com.androidharness.musicplayer.feature.player.PlayerViewModel
@@ -145,6 +146,10 @@ fun LibraryScreen(
                     .fillMaxSize()
                     .padding(padding)
                     .statusBarsPadding()
+                    .motionBlurScroll(
+                        enabled = ui.scrollMotionBlur && !ui.reducedMotion,
+                        intensityPercent = ui.motionBlurIntensity,
+                    )
                     .padding(horizontal = 16.dp),
             ) {
                 Header(

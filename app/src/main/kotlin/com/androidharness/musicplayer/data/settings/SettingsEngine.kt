@@ -104,6 +104,7 @@ object SettingsEngine {
         saturation = saturation.finite(1f).coerceIn(0f, 2f),
         glassAlpha = glassAlpha.finite(0.18f).coerceIn(0f, 1f),
         animationScale = animationScale.finite(1f).coerceIn(0.25f, 2f),
+        motionBlurIntensity = motionBlurIntensity.coerceIn(0, 100),
     )
 
     private fun LibrarySettings.normalized(): LibrarySettings = copy(

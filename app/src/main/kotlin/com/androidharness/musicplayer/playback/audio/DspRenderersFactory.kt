@@ -5,7 +5,6 @@ import androidx.annotation.OptIn
 import androidx.media3.common.audio.AudioProcessor
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.DefaultRenderersFactory
-import androidx.media3.exoplayer.audio.AudioOffloadSupport
 import androidx.media3.exoplayer.audio.AudioSink
 import androidx.media3.exoplayer.audio.DefaultAudioSink
 
@@ -26,12 +25,6 @@ class DspRenderersFactory(
         enableAudioOutputPlaybackParams: Boolean,
     ): AudioSink = DefaultAudioSink.Builder(context)
         .setEnableFloatOutput(enableFloatOutput)
-        .setEnableAudioOutputPlaybackParameters(enableAudioOutputPlaybackParams)
-        // Force software AudioTrack. Hardware offload is enabled by default on capable
-        // devices and has historically glitched when the sample rate changes between
-        // gapless tracks (chipmunk / pitch-shifted audio). Software mode reconfigures the
-        // AudioTrack cleanly for every format change.
-        .setAudioOffloadSupportProvider { _, _ -> AudioOffloadSupport.DEFAULT_UNSUPPORTED }
         .setAudioProcessorChain(
             DefaultAudioSink.DefaultAudioProcessorChain(*processors.toTypedArray())
         )

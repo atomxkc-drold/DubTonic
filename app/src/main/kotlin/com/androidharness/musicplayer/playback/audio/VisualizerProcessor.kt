@@ -1,6 +1,7 @@
 package com.androidharness.musicplayer.playback.audio
 
 import android.os.SystemClock
+import android.util.Log
 import androidx.media3.common.C
 import androidx.media3.common.audio.AudioProcessor.AudioFormat
 import androidx.media3.common.audio.BaseAudioProcessor
@@ -26,9 +27,19 @@ class VisualizerProcessor(
         if (inputAudioFormat.encoding != C.ENCODING_PCM_16BIT &&
             inputAudioFormat.encoding != C.ENCODING_PCM_FLOAT
         ) {
+            Log.i(
+                TAG,
+                "tap bypass: rate=${inputAudioFormat.sampleRate} " +
+                    "ch=${inputAudioFormat.channelCount} enc=${inputAudioFormat.encoding}",
+            )
             return AudioFormat.NOT_SET
         }
         encoding = inputAudioFormat.encoding
+        Log.i(
+            TAG,
+            "tap ready: rate=${inputAudioFormat.sampleRate} " +
+                "ch=${inputAudioFormat.channelCount} enc=${inputAudioFormat.encoding}",
+        )
         return inputAudioFormat
     }
 
@@ -91,6 +102,7 @@ class VisualizerProcessor(
     }
 
     private companion object {
+        const val TAG = "DubTonicAudio"
         const val PUBLISH_INTERVAL_MS = 55L
         const val HEADROOM = 3.2f
         const val SHAPING = 0.65f

@@ -55,6 +55,9 @@ android {
 
     testOptions {
         unitTests.isIncludeAndroidResources = true
+        // Processor tests exercise Media3 classes that touch android.os stubs; default
+        // values are enough there because no device behaviour is under test.
+        unitTests.isReturnDefaultValues = true
     }
 }
 

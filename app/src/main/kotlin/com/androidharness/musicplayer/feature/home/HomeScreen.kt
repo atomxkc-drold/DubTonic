@@ -60,6 +60,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.androidharness.musicplayer.ui.motion.motionBlurScroll
 import com.androidharness.musicplayer.feature.player.MiniPlayer
 import com.androidharness.musicplayer.feature.player.PlayerViewModel
 import com.androidharness.musicplayer.ui.chrome.BrandMark
@@ -210,6 +211,10 @@ fun HomeScreen(
                     .fillMaxSize()
                     .padding(padding)
                     .statusBarsPadding()
+                    .motionBlurScroll(
+                        enabled = ui.scrollMotionBlur && !ui.reducedMotion,
+                        intensityPercent = ui.motionBlurIntensity,
+                    )
                     .verticalScroll(scroll)
                     .padding(horizontal = 20.dp),
             ) {

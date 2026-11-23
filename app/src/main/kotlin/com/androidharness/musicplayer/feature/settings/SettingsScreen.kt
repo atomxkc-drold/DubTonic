@@ -39,6 +39,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import com.androidharness.musicplayer.ui.motion.motionBlurScroll
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.androidharness.musicplayer.data.settings.AudioCodec
@@ -66,7 +67,13 @@ fun SettingsScreen(
             ChromeBackdrop(reducedMotion = settings.ui.reducedMotion)
 
             LazyColumn(
-                modifier = Modifier.fillMaxSize().statusBarsPadding(),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .motionBlurScroll(
+                        enabled = settings.ui.scrollMotionBlur && !settings.ui.reducedMotion,
+                        intensityPercent = settings.ui.motionBlurIntensity,
+                    )
+                    .statusBarsPadding(),
                 contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
@@ -146,6 +153,19 @@ fun SettingsScreen(
                             title = "Reduce motion",
                             checked = settings.ui.reducedMotion,
                             onCheckedChange = viewModel::setReducedMotion,
+                        )
+                        SwitchRow(
+                            title = "Scroll motion blur",
+                            checked = settings.ui.scrollMotionBlur,
+                            onCheckedChange = viewModel::setScrollMotionBlur,
+                        )
+                        SliderRow(
+                            title = "Motion blur strength",
+                            value = settings.ui.motionBlurIntensity.toFloat(),
+                            valueText = "${settings.ui.motionBlurIntensity}%",
+                            range = 0f..100f,
+                            steps = 19,
+                            onChange = viewModel::setMotionBlurIntensity,
                         )
                     }
                 }

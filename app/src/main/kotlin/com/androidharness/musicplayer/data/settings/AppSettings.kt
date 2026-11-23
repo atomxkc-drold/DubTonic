@@ -13,7 +13,7 @@ data class AppSettings(
     val network: NetworkSettings = NetworkSettings(),
 ) {
     companion object {
-        const val CURRENT_SCHEMA_VERSION: Int = 3
+        const val CURRENT_SCHEMA_VERSION: Int = 4
     }
 }
 
@@ -113,6 +113,10 @@ data class UiSettings(
     val animationScale: Float = 1f,
     val paletteMode: PaletteMode = PaletteMode.DYNAMIC,
     val reducedMotion: Boolean = false,
+    /** Smear scrolling content while it moves. */
+    val scrollMotionBlur: Boolean = true,
+    /** Dial from 0 (off) to 100 (strongest). */
+    val motionBlurIntensity: Int = 55,
 )
 
 @Serializable

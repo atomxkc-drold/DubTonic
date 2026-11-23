@@ -131,6 +131,14 @@ class SettingsViewModel @Inject constructor(
         it.copy(ui = it.ui.copy(glassAlpha = value))
     }
 
+    fun setScrollMotionBlur(enabled: Boolean) = update {
+        it.copy(ui = it.ui.copy(scrollMotionBlur = enabled))
+    }
+
+    fun setMotionBlurIntensity(value: Float) = update {
+        it.copy(ui = it.ui.copy(motionBlurIntensity = value.roundToInt()))
+    }
+
     fun setWifiBufferMb(value: Float) = update {
         it.copy(playback = it.playback.copy(
             wifiBuffer = it.playback.wifiBuffer.copy(targetBufferMb = value.roundToInt())
