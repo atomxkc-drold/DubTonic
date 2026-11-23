@@ -100,6 +100,16 @@ class HomeViewModel @Inject constructor(
         play(tracks.value, shuffle = true)
     }
 
+    /** Liked Music tile in the Home launchpad. */
+    fun playLiked() {
+        play(tracks.value.filter { it.isFavorite }, shuffle = true)
+    }
+
+    /** New Release Mix tile: the most recently added songs. */
+    fun playRecent() {
+        play(tracks.value.sortedByDescending { it.addedAtMs }.take(30), shuffle = false)
+    }
+
     /** Auto-ordered continuous mix that starts from the track already playing. */
     fun playFlow(seedId: String? = null) {
         val library = tracks.value

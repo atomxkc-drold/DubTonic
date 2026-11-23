@@ -31,6 +31,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.ThumbUp
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -108,7 +109,17 @@ fun HomeScreen(
     val stacks = remember(tracks) { buildVibeStacks(tracks, limit = 6, minSize = 3) }
     val route = remember(tracks) { buildSonicFlow(tracks, maxTracks = 14) }
     var eraStart by rememberSaveable(tracks) { mutableStateOf<Int?>(null) }
+    var homeMood by rememberSaveable { mutableStateOf(Moods.ALL) }
     val selectedEra = buckets.firstOrNull { it.startYear == eraStart } ?: buckets.maxByOrNull { it.count }
+
+    val moodPool = remember(tracks, homeMood) { tracksForMood(tracks, homeMood) }
+    val moodStacks = remember(moodPool, stacks) {
+        val ids = moodPool.mapTo(HashSet()) { it.id }
+        stacks.filter { stack -> stack.trackIds.any { it in ids } }.ifEmpty { stacks }
+    }
+    val moodBuckets = remember(moodPool, buckets) {
+        eraBuckets(moodPool, includeUndated = true).ifEmpty { buckets }
+    }
 
     val accentFor: (Int) -> Color = remember(aurora, dark) {
         { index ->
@@ -117,6 +128,57 @@ fun HomeScreen(
             if (dark) tint else lerp(tint, Color(0xFF0E2A24), 0.35f)
         }
     }
+
+    // Launchpad tiles: the same mixes the shelves below offer, but as one tap targets.
+    val launchTiles = buildList {
+        add(
+            LaunchTile(
+                id = "flow",
+                label = "Sonic Flow",
+                artwork = viewModel.artUri(route.firstOrNull()?.coverArtId),
+                accent = accent,
+            ) { viewModel.playFlow(playback.trackId) }
+        )
+        add(
+            LaunchTile(
+                id = "liked",
+                label = "Liked Music",
+                artwork = null,
+                accent = accent,
+                icon = Icons.Filled.ThumbUp,
+            ) { viewModel.playLiked() }
+        )
+        add(
+            LaunchTile(
+                id = "recent",
+                label = "New Release Mix",
+                artwork = viewModel.artUri(moodPool.maxByOrNull { it.addedAtMs }?.coverArtId),
+                accent = accent,
+            ) { viewModel.playRecent() }
+        )
+        moodStacks.take(4).forEachIndexed { index, stack ->
+            add(
+                LaunchTile(
+                    id = "stack-${stack.id}",
+                    label = stack.title,
+                    artwork = viewModel.artUri(stack.coverArtIds.firstOrNull()),
+                    accent = accentFor(index),
+                ) { viewModel.playStack(stack) }
+            )
+        }
+        moodBuckets.take(4).forEachIndexed { index, bucket ->
+            add(
+                LaunchTile(
+                    id = "era-${bucket.startYear}",
+                    label = bucket.label,
+                    artwork = viewModel.artUri(
+                        tracksInEra(moodPool, bucket).firstOrNull()?.coverArtId
+                    ),
+                    accent = accentFor(index),
+                ) { viewModel.playEra(bucket) }
+            )
+        }
+    }.take(12)
 
     Box(modifier = Modifier.fillMaxSize().background(base)) {
         HomeBackdrop(
@@ -151,6 +213,18 @@ fun HomeScreen(
                     .padding(horizontal = 20.dp),
             ) {
                 Spacer(Modifier.height(6.dp))
+
+                HomeLaunchpad(
+                    tiles = launchTiles,
+                    selectedMood = homeMood,
+                    onMoodSelected = { homeMood = it },
+                    onOpenSettings = onOpenSettings,
+                    accent = accent,
+                    ink = ink,
+                    muted = muted,
+                )
+
+                Spacer(Modifier.height(18.dp))
 
                 SubsonicBrandHeader(
                     username = session?.username,
