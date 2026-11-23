@@ -34,7 +34,6 @@ class PlaybackEngine @Inject constructor(
     private val buffering: BufferingPolicy,
     private val settings: SettingsRepository,
     private val connectivity: ConnectivityMonitor,
-    private val equalizer: ParametricEqProcessor,
     private val replayGain: ReplayGainController,
     private val dataSourceFactory: DataSource.Factory,
     private val streamFallback: StreamPlaybackFallback,
@@ -52,7 +51,11 @@ class PlaybackEngine @Inject constructor(
         if (exoPlayer != null) return
 
         val snapshot = settings.settings.value
-        equalizer.update(snapshot.playback.equalizer)
+
+        // Fresh processor instances per player build. Media3 binds an AudioProcessor to one
+        // audio sink, so reusing the injected singletons across a release()/rebuild fed the
+        // new player buffers stamped by the old one — the source of the screeching tracks.
+        val equalizer = ParametricEqProcessor().also { it.update(snapshot.playback.equalizer) }
 
         val audioAttributes = AudioAttributes.Builder()
             .setUsage(C.USAGE_MEDIA)
@@ -61,7 +64,7 @@ class PlaybackEngine @Inject constructor(
 
         val renderers = DspRenderersFactory(
             context,
-            listOf(replayGain.processor, equalizer),
+            listOf(replayGain.newProcessor(), equalizer),
         ).setEnableAudioFloatOutput(true)
 
         val mediaSourceFactory = DefaultMediaSourceFactory(context)

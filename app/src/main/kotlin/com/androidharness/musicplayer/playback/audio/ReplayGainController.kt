@@ -26,10 +26,17 @@ class ReplayGainController @Inject constructor(
             gain
 
         override fun isUnityUntil(samplePosition: Long, sampleRate: Int): Long =
-            if (gain == 1f) samplePosition else samplePosition + UNITY_WINDOW_SAMPLES
+            // "Unity until" means "nothing to do in this window". This used to return the
+            // window offset when the gain was NOT 1, so Media3 skipped exactly the samples
+            // that needed gain and ReplayGain never applied at all.
+            if (gain == 1f) samplePosition + UNITY_WINDOW_SAMPLES else samplePosition
     }
 
-    val processor: GainProcessor = GainProcessor(gainProvider)
+    /**
+     * A new processor for every player build. An AudioProcessor is bound to one audio sink;
+     * handing the same instance to a rebuilt ExoPlayer corrupts the PCM stream.
+     */
+    fun newProcessor(): GainProcessor = GainProcessor(gainProvider)
 
     fun onTrack(track: Track?) {
         val replayGain = settings.settings.value.playback.replayGain
@@ -45,6 +52,8 @@ class ReplayGainController @Inject constructor(
         } ?: 0f
 
         val linear = 10f.pow((decibels + replayGain.preampDb) / 20f)
+            // A bogus server-side gain tag must never turn into a wall of noise.
+            .coerceIn(MIN_GAIN, MAX_GAIN)
         gain = if (replayGain.preventClipping) linear.coerceAtMost(1f) else linear
     }
 
@@ -54,5 +63,7 @@ class ReplayGainController @Inject constructor(
 
     private companion object {
         const val UNITY_WINDOW_SAMPLES = 100_000_000L
+        const val MIN_GAIN = 0.05f
+        const val MAX_GAIN = 4f
     }
 }

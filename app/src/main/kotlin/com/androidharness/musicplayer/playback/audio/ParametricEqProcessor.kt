@@ -8,17 +8,17 @@ import androidx.media3.common.util.UnstableApi
 import com.androidharness.musicplayer.data.settings.EqualizerSettings
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
-import javax.inject.Inject
-import javax.inject.Singleton
 import kotlin.math.pow
 
 /**
  * Parametric EQ over interleaved PCM. Supports 16-bit and float input and keeps a
  * per-channel biquad state per band, so no channel bleed occurs.
+ *
+ * Deliberately not a singleton: every player build gets its own instance, because Media3
+ * binds an AudioProcessor to a single audio sink.
  */
 @UnstableApi
-@Singleton
-class ParametricEqProcessor @Inject constructor() : BaseAudioProcessor() {
+class ParametricEqProcessor : BaseAudioProcessor() {
 
     @Volatile
     private var settings = EqualizerSettings()
