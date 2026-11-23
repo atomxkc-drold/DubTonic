@@ -1,6 +1,7 @@
 package com.androidharness.musicplayer.feature.home
 
 import android.net.Uri
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -13,6 +14,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -41,7 +43,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -55,7 +60,9 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -67,6 +74,8 @@ import com.androidharness.musicplayer.feature.player.PlaybackUiState
 import com.androidharness.musicplayer.ui.chrome.SubsonicBadge
 import com.androidharness.musicplayer.ui.theme.SpringSpecs
 import kotlin.math.abs
+import kotlin.math.sin
+import kotlinx.coroutines.launch
 
 /**
  * Loose fan of covers with a springy float. Each card drifts on its own phase so the
@@ -112,47 +121,101 @@ fun AlbumFan(
         return
     }
 
-    BoxWithConstraints(modifier = modifier.fillMaxWidth().height(204.dp)) {
-        val cardWidth = (maxWidth * 0.37f).coerceAtMost(148.dp)
-        val step = if (tracks.size > 1) (maxWidth - cardWidth) / (tracks.size - 1) else 0.dp
+    val count = tracks.size
+    var index by remember { mutableIntStateOf(0) }
+    val current = index % count
+    val scope = rememberCoroutineScope()
+    val swipe = remember { Animatable(0f) }
+    val glow = remember { Animatable(0f) }
+    val entry = remember { Animatable(0f) }
+    var direction by remember { mutableIntStateOf(1) }
+    var dragPx by remember { mutableFloatStateOf(0f) }
+    var deckWidth by remember { mutableFloatStateOf(1f) }
 
-        BreathingHalo(
-            color = accent,
-            animate = animate,
-            modifier = Modifier.fillMaxSize(),
+    fun flip(dir: Int) {
+        if (count <= 1 || swipe.isRunning) return
+        direction = dir
+        scope.launch {
+            launch {
+                glow.snapTo(0f)
+                glow.animateTo(1f, tween(150, easing = FastOutSlowInEasing))
+                glow.animateTo(0f, tween(430, easing = FastOutSlowInEasing))
+            }
+            swipe.animateTo(1f, tween(340, easing = FastOutSlowInEasing))
+            index = (current + 1) % count
+            swipe.snapTo(0f)
+            entry.snapTo(-dir * 55f)
+            entry.animateTo(0f, tween(300, easing = FastOutSlowInEasing))
+        }
+        dragPx = 0f
+    }
+
+    BoxWithConstraints(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(212.dp)
+            .onSizeChanged { deckWidth = it.width.toFloat().coerceAtLeast(1f) }
+            .pointerInput(count) {
+                detectHorizontalDragGestures(
+                    onDragEnd = {
+                        when {
+                            dragPx < -70f -> flip(1)
+                            dragPx > 70f -> flip(-1)
+                            else -> dragPx = 0f
+                        }
+                    },
+                    onDragCancel = { dragPx = 0f },
+                    onHorizontalDrag = { _, amount -> dragPx += amount },
+                )
+            },
+    ) {
+        // Flare behind the deck, brightest halfway through a swipe.
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .graphicsLayer { alpha = glow.value }
+                .background(
+                    Brush.radialGradient(
+                        listOf(
+                            accent.copy(alpha = 0.60f),
+                            accent.copy(alpha = 0.18f),
+                            Color.Transparent,
+                        )
+                    )
+                ),
         )
 
-        tracks.forEachIndexed { index, track ->
-            val fraction = if (tracks.size > 1) index.toFloat() / (tracks.size - 1) else 0.5f
-            val rotation = (fraction - 0.5f) * 26f
-            val x = if (tracks.size == 1) (maxWidth - cardWidth) / 2 else step * index
-            val float = if (animate) {
-                val transition = rememberInfiniteTransition(label = "fan$index")
-                transition.animateFloat(
-                    initialValue = 0f,
-                    targetValue = 1f,
-                    animationSpec = infiniteRepeatable(
-                        animation = tween(
-                            durationMillis = 5_200 + index * 340,
-                            easing = FastOutSlowInEasing,
-                        ),
-                        repeatMode = RepeatMode.Reverse,
-                    ),
-                    label = "fanFloat$index",
-                ).value
-            } else {
-                0.5f
-            }
+        val cardWidth = (maxWidth * 0.44f).coerceAtMost(150.dp)
+        val dragProgress = (dragPx / deckWidth).coerceIn(-0.9f, 0.9f)
+        val outgoing = (direction * swipe.value + dragProgress).coerceIn(-1f, 1f)
 
-            val shape = RoundedCornerShape(14.dp)
+        // Back to front, so the leading card is drawn last and flips on top.
+        for (slot in FAN_SLOTS.lastIndex downTo 0) {
+            val track = tracks[(current + slot) % count]
+            val fan = FAN_SLOTS[slot]
+            val isFront = slot == 0
+            val offset = if (isFront) outgoing else 0f
+            val arc = sin(abs(offset) * Math.PI.toFloat())
+            val shape = RoundedCornerShape(16.dp)
+
             Box(
                 modifier = Modifier
-                    .offset(
-                        x = x,
-                        y = (14f + abs(fraction - 0.5f) * 24f + float * 7f).dp,
-                    )
+                    .align(Alignment.Center)
                     .size(cardWidth)
-                    .graphicsLayer { rotationZ = rotation }
+                    .graphicsLayer {
+                        translationX = fan.dx * deckWidth + offset * deckWidth * 0.85f
+                        translationY = fan.dy.toPx() + (-arc * 92f)
+                        rotationZ = fan.rotation + offset * 26f
+                        rotationY = if (isFront) {
+                            -offset * 180f + (if (swipe.value == 0f) entry.value else 0f)
+                        } else {
+                            0f
+                        }
+                        scaleX = fan.scale
+                        scaleY = fan.scale
+                        alpha = if (isFront) (1f - abs(offset)).coerceIn(0f, 1f) else 0.92f
+                        cameraDistance = 14f * density
+                    }
                     .shadow(18.dp, shape)
                     .clip(shape)
                     .background(ink.copy(alpha = 0.16f))
@@ -173,6 +236,21 @@ fun AlbumFan(
         }
     }
 }
+
+private data class FanSlot(
+    val dx: Float,
+    val dy: Dp,
+    val rotation: Float,
+    val scale: Float,
+)
+
+private val FAN_SLOTS = listOf(
+    FanSlot(0f, 0.dp, 0f, 1f),
+    FanSlot(-0.26f, 18.dp, -15f, 0.95f),
+    FanSlot(0.26f, 18.dp, 15f, 0.95f),
+    FanSlot(-0.46f, 40.dp, -27f, 0.90f),
+    FanSlot(0.46f, 40.dp, 27f, 0.90f),
+)
 
 /**
  * "Sonic Flow": one tap starts a queue ordered by feel. The wave draws the actual route

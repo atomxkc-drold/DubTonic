@@ -31,8 +31,12 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.stateIn
+import kotlin.random.Random
 
 data class HomeClock(val hour: Int, val minute: Int)
+
+/** How many covers the Home fan deck draws from the library per app launch. */
+private const val FAN_SIZE = 24
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
@@ -52,6 +56,16 @@ class HomeViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     val playback: StateFlow<PlaybackUiState> = connection.state
+
+    /**
+     * Covers for the Home fan deck. The seed is generated once per process, so the deck
+     * reshuffles every time the app is launched but stays put while it is open.
+     */
+    private val sessionSeed = Random.nextLong()
+
+    val fanTracks: StateFlow<List<Track>> = tracks
+        .map { all -> selectRandomArtwork(all, FAN_SIZE, sessionSeed) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     val clock: StateFlow<HomeClock> = clockTicks()
         .stateIn(

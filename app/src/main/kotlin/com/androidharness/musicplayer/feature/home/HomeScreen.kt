@@ -80,6 +80,7 @@ fun HomeScreen(
     playerViewModel: PlayerViewModel = hiltViewModel(),
 ) {
     val tracks by viewModel.tracks.collectAsStateWithLifecycle()
+    val fanTracks by viewModel.fanTracks.collectAsStateWithLifecycle()
     val playback by viewModel.playback.collectAsStateWithLifecycle()
     val colors by viewModel.colors.collectAsStateWithLifecycle()
     val ui by viewModel.ui.collectAsStateWithLifecycle()
@@ -214,6 +215,16 @@ fun HomeScreen(
             ) {
                 Spacer(Modifier.height(6.dp))
 
+                AlbumFan(
+                    tracks = fanTracks,
+                    artworkFor = { viewModel.artworkFor(it) },
+                    ink = ink,
+                    accent = accent,
+                    animate = animate,
+                )
+
+                Spacer(Modifier.height(18.dp))
+
                 HomeLaunchpad(
                     tiles = launchTiles,
                     selectedMood = homeMood,
@@ -307,14 +318,6 @@ fun HomeScreen(
                     ink = ink,
                     muted = muted,
                     onOpenLibrary = onOpenLibrary,
-                )
-
-                AlbumFan(
-                    tracks = selectHomeArtwork(tracks),
-                    artworkFor = { viewModel.artworkFor(it) },
-                    ink = ink,
-                    accent = accent,
-                    animate = animate,
                 )
 
                 Spacer(Modifier.height(22.dp))
