@@ -73,6 +73,30 @@ object PlayerIcons {
         )
     }
 
+    val Sparkle: ImageVector by lazy {
+        icon(
+            "Sparkle",
+            "M19 9l1.25-2.75L23 5l-2.75-1.25L19 1l-1.25 2.75L15 5l2.75 1.25L19 9zm-7.5.5L9 4" +
+                " 6.5 9.5 1 12l5.5 2.5L9 20l2.5-5.5L17 12l-5.5-2.5zM19 15l-1.25 2.75L15 19" +
+                "l2.75 1.25L19 23l1.25-2.75L23 19l-2.75-1.25L19 15z"
+        )
+    }
+
+    val Equalizer: ImageVector by lazy {
+        icon(
+            "Equalizer",
+            "M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7z" +
+                "m14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z"
+        )
+    }
+
+    val Spectrum: ImageVector by lazy {
+        icon(
+            "Spectrum",
+            "M4 10h2v8H4v-8zm4-6h2v14H8V4zm4 3h2v11h-2V7zm4-4h2v18h-2V3zm4 8h2v10h-2V11z"
+        )
+    }
+
     private fun icon(name: String, pathData: String): ImageVector =
         ImageVector.Builder(
             name = name,
