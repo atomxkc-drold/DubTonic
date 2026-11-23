@@ -1,5 +1,6 @@
 package com.androidharness.musicplayer.feature.home
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.ExperimentalSharedTransitionApi
@@ -19,6 +20,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -27,6 +29,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -45,6 +48,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
@@ -222,6 +226,15 @@ fun HomeScreen(
                     Spacer(Modifier.height(16.dp))
                 }
 
+                CollectionCard(
+                    trackCount = tracks.size,
+                    mixCount = stacks.size,
+                    accent = accent,
+                    ink = ink,
+                    muted = muted,
+                    onOpenLibrary = onOpenLibrary,
+                )
+
                 AlbumFan(
                     tracks = selectHomeArtwork(tracks),
                     artworkFor = { viewModel.artworkFor(it) },
@@ -232,17 +245,28 @@ fun HomeScreen(
 
                 Spacer(Modifier.height(22.dp))
 
-                SonicFlowCard(
-                    route = route,
-                    trackCount = tracks.size,
-                    totalDurationMs = tracks.sumOf { it.durationMs },
+                var sonicFlowOpen by rememberSaveable { mutableStateOf(true) }
+                CollapsibleSection(
+                    title = "SONIC FLOW",
+                    hint = "${tracks.size} TRACKS",
+                    expanded = sonicFlowOpen,
+                    onToggle = { sonicFlowOpen = !sonicFlowOpen },
                     accent = accent,
-                    glow = aurora.blobs[1],
                     ink = ink,
                     muted = muted,
-                    animate = animate,
-                    onClick = { viewModel.playFlow(playback.trackId) },
-                )
+                ) {
+                    SonicFlowCard(
+                        route = route,
+                        trackCount = tracks.size,
+                        totalDurationMs = tracks.sumOf { it.durationMs },
+                        accent = accent,
+                        glow = aurora.blobs[1],
+                        ink = ink,
+                        muted = muted,
+                        animate = animate,
+                        onClick = { viewModel.playFlow(playback.trackId) },
+                    )
+                }
 
                 Spacer(Modifier.height(12.dp))
 
@@ -281,26 +305,30 @@ fun HomeScreen(
                 }
 
                 if (buckets.isNotEmpty()) {
-                    Spacer(Modifier.height(34.dp))
+                    Spacer(Modifier.height(30.dp))
 
-                    SectionLabel(
+                    var timeMachineOpen by rememberSaveable { mutableStateOf(false) }
+                    CollapsibleSection(
                         index = "01",
                         title = "TIME MACHINE",
-                        hint = "TAP THE RING",
-                        accent = accent,
-                        muted = muted,
-                    )
-                    Spacer(Modifier.height(16.dp))
-                    EraDial(
-                        buckets = buckets,
-                        selected = selectedEra,
+                        hint = "${buckets.size} ERAS",
+                        expanded = timeMachineOpen,
+                        onToggle = { timeMachineOpen = !timeMachineOpen },
                         accent = accent,
                         ink = ink,
                         muted = muted,
-                        animate = animate,
-                        onSelect = { eraStart = it.startYear },
-                        onPlay = viewModel::playEra,
-                    )
+                    ) {
+                        EraDial(
+                            buckets = buckets,
+                            selected = selectedEra,
+                            accent = accent,
+                            ink = ink,
+                            muted = muted,
+                            animate = animate,
+                            onSelect = { eraStart = it.startYear },
+                            onPlay = viewModel::playEra,
+                        )
+                    }
                 }
 
                 if (stacks.isNotEmpty()) {
@@ -325,15 +353,6 @@ fun HomeScreen(
                 }
 
                 Spacer(Modifier.height(30.dp))
-
-                Footer(
-                    trackCount = tracks.size,
-                    stackCount = stacks.size,
-                    ink = ink,
-                    muted = muted,
-                    onOpenLibrary = onOpenLibrary,
-                )
-
                 Spacer(Modifier.height(24.dp))
             }
         }
@@ -390,28 +409,50 @@ private fun EmptyHint(ink: Color, muted: Color, onOpenSettings: () -> Unit) {
 }
 
 @Composable
-private fun Footer(
+private fun CollectionCard(
     trackCount: Int,
-    stackCount: Int,
+    mixCount: Int,
+    accent: Color,
     ink: Color,
     muted: Color,
     onOpenLibrary: () -> Unit,
 ) {
+    val shape = RoundedCornerShape(22.dp)
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(shape)
+            .background(ink.copy(alpha = 0.06f))
+            .border(1.dp, ink.copy(alpha = 0.12f), shape)
+            .clickable(onClick = onOpenLibrary)
+            .padding(horizontal = 18.dp, vertical = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween,
     ) {
-        Column {
+        Box(
+            modifier = Modifier
+                .size(38.dp)
+                .clip(CircleShape)
+                .background(accent.copy(alpha = 0.18f)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                PlayerIcons.Queue,
+                contentDescription = null,
+                tint = accent,
+                modifier = Modifier.size(20.dp),
+            )
+        }
+        Spacer(Modifier.width(14.dp))
+        Column(Modifier.weight(1f)) {
             Text(
                 text = "YOUR COLLECTION",
                 color = muted,
                 style = MaterialTheme.typography.labelSmall,
                 fontFamily = FontFamily.Monospace,
             )
-            Spacer(Modifier.height(4.dp))
+            Spacer(Modifier.height(3.dp))
             Text(
-                text = "$trackCount songs · $stackCount mixes",
+                text = "$trackCount songs · $mixCount mixes",
                 color = ink,
                 style = MaterialTheme.typography.bodyMedium,
             )
@@ -422,11 +463,73 @@ private fun Footer(
             style = MaterialTheme.typography.labelSmall,
             fontFamily = FontFamily.Monospace,
             fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.End,
-            modifier = Modifier
-                .clip(RoundedCornerShape(12.dp))
-                .clickable(onClick = onOpenLibrary)
-                .padding(horizontal = 12.dp, vertical = 10.dp),
         )
+    }
+}
+
+/**
+ * Section header that folds its content away. The chevron turns as it opens, and the
+ * summary hint stays visible while collapsed so the page still says what is inside.
+ */
+@Composable
+private fun CollapsibleSection(
+    title: String,
+    hint: String,
+    expanded: Boolean,
+    onToggle: () -> Unit,
+    accent: Color,
+    ink: Color,
+    muted: Color,
+    index: String? = null,
+    content: @Composable () -> Unit,
+) {
+    Column(Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(14.dp))
+                .clickable(onClick = onToggle)
+                .padding(vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            if (index != null) {
+                Text(
+                    text = index,
+                    color = accent,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontFamily = FontFamily.Monospace,
+                    fontWeight = FontWeight.Bold,
+                )
+                Spacer(Modifier.width(10.dp))
+            }
+            Text(
+                text = title,
+                color = ink,
+                style = MaterialTheme.typography.labelSmall,
+                fontFamily = FontFamily.Monospace,
+                letterSpacing = MaterialTheme.typography.labelSmall.letterSpacing,
+                fontWeight = FontWeight.Bold,
+            )
+            Spacer(Modifier.weight(1f))
+            Text(
+                text = hint,
+                color = muted,
+                style = MaterialTheme.typography.labelSmall,
+                fontFamily = FontFamily.Monospace,
+            )
+            Spacer(Modifier.width(6.dp))
+            Icon(
+                imageVector = Icons.Filled.KeyboardArrowDown,
+                contentDescription = if (expanded) "Collapse $title" else "Expand $title",
+                tint = muted,
+                modifier = Modifier.rotate(if (expanded) 180f else 0f).size(20.dp),
+            )
+        }
+        AnimatedVisibility(visible = expanded) {
+            Column(Modifier.fillMaxWidth()) {
+                Spacer(Modifier.height(12.dp))
+                content()
+            }
+        }
     }
 }
