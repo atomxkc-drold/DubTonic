@@ -13,7 +13,7 @@ data class AppSettings(
     val network: NetworkSettings = NetworkSettings(),
 ) {
     companion object {
-        const val CURRENT_SCHEMA_VERSION: Int = 2
+        const val CURRENT_SCHEMA_VERSION: Int = 3
     }
 }
 
@@ -151,7 +151,7 @@ data class NetworkSettings(
     val wifiTranscode: TranscodeProfile = TranscodeProfile(),
     val cellularTranscode: TranscodeProfile = TranscodeProfile(
         enabled = true,
-        codec = AudioCodec.OPUS,
+        codec = AudioCodec.MP3,
         maxBitrateKbps = 128,
     ),
     val allowMeteredStreaming: Boolean = true,

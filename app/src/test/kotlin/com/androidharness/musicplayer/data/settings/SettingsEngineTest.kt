@@ -159,4 +159,41 @@ class SettingsEngineTest {
         val decoded = SettingsEngine.decode(SettingsEngine.encode(settings))
         assertTrue(decoded.ui.reducedMotion)
     }
+
+    @Test
+    fun v2OpusCellularTranscodeMigratesToMp3() {
+        val raw = """
+            {"schemaVersion":2,"network":{"cellularTranscode":{
+                "enabled":true,"codec":"OPUS","maxBitrateKbps":128}}}
+        """.trimIndent()
+        val decoded = SettingsEngine.decode(raw)
+        assertEquals(AudioCodec.MP3, decoded.network.cellularTranscode.codec)
+        assertEquals(128, decoded.network.cellularTranscode.maxBitrateKbps)
+        assertEquals(AppSettings.CURRENT_SCHEMA_VERSION, decoded.schemaVersion)
+    }
+
+    @Test
+    fun v2OpusWifiTranscodeMigratesToMp3() {
+        val raw = """
+            {"schemaVersion":2,"network":{"wifiTranscode":{
+                "enabled":true,"codec":"OPUS","maxBitrateKbps":320}}}
+        """.trimIndent()
+        val decoded = SettingsEngine.decode(raw)
+        assertEquals(AudioCodec.MP3, decoded.network.wifiTranscode.codec)
+    }
+
+    @Test
+    fun nonOpusTranscodeSurvivesMigration() {
+        val raw = """
+            {"schemaVersion":2,"network":{"cellularTranscode":{
+                "enabled":true,"codec":"AAC","maxBitrateKbps":256}}}
+        """.trimIndent()
+        val decoded = SettingsEngine.decode(raw)
+        assertEquals(AudioCodec.AAC, decoded.network.cellularTranscode.codec)
+    }
+
+    @Test
+    fun defaultCellularTranscodeIsMp3() {
+        assertEquals(AudioCodec.MP3, AppSettings().network.cellularTranscode.codec)
+    }
 }

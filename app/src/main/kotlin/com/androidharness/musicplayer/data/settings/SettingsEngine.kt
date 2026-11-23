@@ -19,13 +19,37 @@ object SettingsEngine {
     fun decode(raw: String?): AppSettings {
         if (raw.isNullOrBlank()) return AppSettings()
         return try {
-            normalize(json.decodeFromString(AppSettings.serializer(), raw))
+            normalize(migrate(json.decodeFromString(AppSettings.serializer(), raw)))
         } catch (_: SerializationException) {
             AppSettings()
         } catch (_: IllegalArgumentException) {
             AppSettings()
         }
     }
+
+    /**
+     * One-time migrations keyed by [AppSettings.schemaVersion].
+     *
+     * v2 persisted OPUS as the cellular transcode default. OPUS transcoding on some
+     * Subsonic-compatible servers returns audio at the wrong sample rate (chipmunk
+     * playback) for a subset of source files, so existing installs fall back to MP3.
+     */
+    private fun migrate(settings: AppSettings): AppSettings {
+        if (settings.schemaVersion >= AppSettings.CURRENT_SCHEMA_VERSION) return settings
+        var migrated = settings
+        if (migrated.schemaVersion < 3) {
+            migrated = migrated.copy(
+                network = migrated.network.copy(
+                    cellularTranscode = migrated.network.cellularTranscode.withCodecFallback(),
+                    wifiTranscode = migrated.network.wifiTranscode.withCodecFallback(),
+                ),
+            )
+        }
+        return migrated
+    }
+
+    private fun TranscodeProfile.withCodecFallback(): TranscodeProfile =
+        if (codec == AudioCodec.OPUS) copy(codec = AudioCodec.MP3) else this
 
     fun encode(settings: AppSettings): String =
         json.encodeToString(AppSettings.serializer(), normalize(settings))
