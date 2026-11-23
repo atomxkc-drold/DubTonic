@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -126,6 +127,9 @@ fun LibraryScreen(
 
         Scaffold(
             containerColor = Color.Transparent,
+            // The column below applies statusBarsPadding itself; Scaffold's own top inset
+            // would add a second status-bar-sized gap under the notification shade.
+            contentWindowInsets = WindowInsets(0, 0, 0, 0),
             bottomBar = {
                 sharedTransitionScope.MiniPlayer(
                     state = playback,
