@@ -68,12 +68,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import coil3.compose.AsyncImage
 import com.androidharness.musicplayer.core.model.Track
 import com.androidharness.musicplayer.feature.player.PlaybackUiState
 import com.androidharness.musicplayer.ui.chrome.SubsonicBadge
 import com.androidharness.musicplayer.ui.theme.SpringSpecs
 import kotlin.math.abs
+import kotlin.math.cos
 import kotlin.math.sin
 import kotlinx.coroutines.launch
 
@@ -125,28 +127,18 @@ fun AlbumFan(
     var index by remember { mutableIntStateOf(0) }
     val current = index % count
     val scope = rememberCoroutineScope()
-    val swipe = remember { Animatable(0f) }
     val glow = remember { Animatable(0f) }
-    val entry = remember { Animatable(0f) }
-    var direction by remember { mutableIntStateOf(1) }
     var dragPx by remember { mutableFloatStateOf(0f) }
     var deckWidth by remember { mutableFloatStateOf(1f) }
 
     fun flip(dir: Int) {
-        if (count <= 1 || swipe.isRunning) return
-        direction = dir
+        if (count <= 1) return
         scope.launch {
-            launch {
-                glow.snapTo(0f)
-                glow.animateTo(1f, tween(150, easing = FastOutSlowInEasing))
-                glow.animateTo(0f, tween(430, easing = FastOutSlowInEasing))
-            }
-            swipe.animateTo(1f, tween(340, easing = FastOutSlowInEasing))
-            index = (current + 1) % count
-            swipe.snapTo(0f)
-            entry.snapTo(-dir * 55f)
-            entry.animateTo(0f, tween(300, easing = FastOutSlowInEasing))
+            glow.snapTo(0f)
+            glow.animateTo(1f, tween(150, easing = FastOutSlowInEasing))
+            glow.animateTo(0f, tween(430, easing = FastOutSlowInEasing))
         }
+        index = ((current + dir) % count + count) % count
         dragPx = 0f
     }
 
@@ -185,35 +177,48 @@ fun AlbumFan(
                 ),
         )
 
-        val cardWidth = (maxWidth * 0.44f).coerceAtMost(150.dp)
-        val dragProgress = (dragPx / deckWidth).coerceIn(-0.9f, 0.9f)
-        val outgoing = (direction * swipe.value + dragProgress).coerceIn(-1f, 1f)
+        val cardWidth = (maxWidth * 0.42f).coerceAtMost(146.dp)
+        val radiusX = deckWidth * 0.30f
+        val dragTurn = (dragPx / deckWidth) * 2.6f
+        val visible = minOf(VISIBLE_CARDS, count)
+        val angleStep = (2.0 * Math.PI / visible).toFloat()
 
-        // Back to front, so the leading card is drawn last and flips on top.
-        for (slot in FAN_SLOTS.lastIndex downTo 0) {
+        // Continuous orbit. Every card rides the same circle, so the deck keeps moving
+        // even when nobody is touching it, and a drag turns the ring with your finger.
+        val phase = if (animate) {
+            rememberInfiniteTransition(label = "fanOrbit").animateFloat(
+                initialValue = 0f,
+                targetValue = (2.0 * Math.PI).toFloat(),
+                animationSpec = infiniteRepeatable(
+                    animation = tween(durationMillis = 18_000, easing = LinearEasing),
+                    repeatMode = RepeatMode.Restart,
+                ),
+                label = "fanPhase",
+            ).value
+        } else {
+            0f
+        }
+
+        repeat(visible) { slot ->
             val track = tracks[(current + slot) % count]
-            val fan = FAN_SLOTS[slot]
-            val isFront = slot == 0
-            val offset = if (isFront) outgoing else 0f
-            val arc = sin(abs(offset) * Math.PI.toFloat())
+            val angle = phase + slot * angleStep + dragTurn
+            val depth = (cos(angle) + 1f) / 2f
+            val scale = 0.70f + 0.30f * depth
             val shape = RoundedCornerShape(16.dp)
 
             Box(
                 modifier = Modifier
                     .align(Alignment.Center)
                     .size(cardWidth)
+                    .zIndex(depth)
                     .graphicsLayer {
-                        translationX = fan.dx * deckWidth + offset * deckWidth * 0.85f
-                        translationY = fan.dy.toPx() + (-arc * 92f)
-                        rotationZ = fan.rotation + offset * 26f
-                        rotationY = if (isFront) {
-                            -offset * 180f + (if (swipe.value == 0f) entry.value else 0f)
-                        } else {
-                            0f
-                        }
-                        scaleX = fan.scale
-                        scaleY = fan.scale
-                        alpha = if (isFront) (1f - abs(offset)).coerceIn(0f, 1f) else 0.92f
+                        translationX = sin(angle) * radiusX
+                        translationY = cos(angle) * 22.dp.toPx()
+                        rotationZ = sin(angle) * 10f
+                        rotationY = sin(angle) * 26f
+                        scaleX = scale
+                        scaleY = scale
+                        alpha = 0.40f + 0.60f * depth
                         cameraDistance = 14f * density
                     }
                     .shadow(18.dp, shape)
@@ -237,20 +242,7 @@ fun AlbumFan(
     }
 }
 
-private data class FanSlot(
-    val dx: Float,
-    val dy: Dp,
-    val rotation: Float,
-    val scale: Float,
-)
-
-private val FAN_SLOTS = listOf(
-    FanSlot(0f, 0.dp, 0f, 1f),
-    FanSlot(-0.26f, 18.dp, -15f, 0.95f),
-    FanSlot(0.26f, 18.dp, 15f, 0.95f),
-    FanSlot(-0.46f, 40.dp, -27f, 0.90f),
-    FanSlot(0.46f, 40.dp, 27f, 0.90f),
-)
+private const val VISIBLE_CARDS = 7
 
 /**
  * "Sonic Flow": one tap starts a queue ordered by feel. The wave draws the actual route

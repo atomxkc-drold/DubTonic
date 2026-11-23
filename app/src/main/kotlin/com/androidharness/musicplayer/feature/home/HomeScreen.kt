@@ -215,28 +215,6 @@ fun HomeScreen(
             ) {
                 Spacer(Modifier.height(6.dp))
 
-                AlbumFan(
-                    tracks = fanTracks,
-                    artworkFor = { viewModel.artworkFor(it) },
-                    ink = ink,
-                    accent = accent,
-                    animate = animate,
-                )
-
-                Spacer(Modifier.height(18.dp))
-
-                HomeLaunchpad(
-                    tiles = launchTiles,
-                    selectedMood = homeMood,
-                    onMoodSelected = { homeMood = it },
-                    onOpenSettings = onOpenSettings,
-                    accent = accent,
-                    ink = ink,
-                    muted = muted,
-                )
-
-                Spacer(Modifier.height(18.dp))
-
                 SubsonicBrandHeader(
                     username = session?.username,
                     onSettings = onOpenSettings,
@@ -318,6 +296,28 @@ fun HomeScreen(
                     ink = ink,
                     muted = muted,
                     onOpenLibrary = onOpenLibrary,
+                )
+
+                Spacer(Modifier.height(26.dp))
+
+                AlbumFan(
+                    tracks = fanTracks,
+                    artworkFor = { viewModel.artworkFor(it) },
+                    ink = ink,
+                    accent = accent,
+                    animate = animate,
+                )
+
+                Spacer(Modifier.height(18.dp))
+
+                HomeLaunchpad(
+                    tiles = launchTiles,
+                    selectedMood = homeMood,
+                    onMoodSelected = { homeMood = it },
+                    onOpenSettings = onOpenSettings,
+                    accent = accent,
+                    ink = ink,
+                    muted = muted,
                 )
 
                 Spacer(Modifier.height(22.dp))
