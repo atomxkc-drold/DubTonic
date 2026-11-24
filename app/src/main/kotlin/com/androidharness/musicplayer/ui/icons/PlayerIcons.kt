@@ -2,6 +2,8 @@ package com.androidharness.musicplayer.ui.icons
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.addPathNodes
 import androidx.compose.ui.unit.dp
@@ -103,6 +105,62 @@ object PlayerIcons {
             "M4 10h2v8H4v-8zm4-6h2v14H8V4zm4 3h2v11h-2V7zm4-4h2v18h-2V3zm4 8h2v10h-2V11z"
         )
     }
+
+    val ThumbUp: ImageVector by lazy {
+        icon(
+            "ThumbUp",
+            "M1 21h4V9H1v12zm22-11c0-1.1-.9-2-2-2h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06" +
+                "L14.17 1 7.59 7.59C7.22 7.95 7 8.45 7 9v10c0 1.1.9 2 2 2h9c.83 0 1.54-.5 1.84-1.22" +
+                "l3.02-7.05c.09-.23.14-.47.14-.73v-2z"
+        )
+    }
+
+    /**
+     * The DubTonic app mark, lifted from ic_launcher_foreground.xml: a beamed double
+     * note with the dub waveform riding in its hollow. The launcher art draws in a
+     * 108 unit viewport, so it is scaled into 24 units here to sit inline with text.
+     */
+    val DubTonic: ImageVector by lazy {
+        ImageVector.Builder(
+            name = "DubTonic",
+            defaultWidth = 24.dp,
+            defaultHeight = 24.dp,
+            viewportWidth = 24f,
+            viewportHeight = 24f,
+        ).apply {
+            addGroup(
+                name = "mark",
+                scaleX = 0.323f,
+                scaleY = 0.323f,
+                translationX = -5.42f,
+                translationY = -5.88f,
+            )
+            addPath(
+                pathData = addPathNodes(DUBTONIC_NOTE_PATH),
+                fill = SolidColor(Color.Black),
+            )
+            addPath(
+                pathData = addPathNodes(DUBTONIC_WAVE_PATH),
+                stroke = SolidColor(Color.Black),
+                strokeLineWidth = 3.4f,
+                strokeLineCap = StrokeCap.Round,
+                strokeLineJoin = StrokeJoin.Round,
+            )
+            clearGroup()
+        }.build()
+    }
+
+    private const val DUBTONIC_NOTE_PATH =
+        "M37.76,36.80 L79.73,30.50 L79.73,38.89 L37.76,45.19 Z " +
+            "M37.76,36.80 L45.73,35.60 L45.73,70.37 L37.76,70.37 Z " +
+            "M71.76,31.70 L79.73,30.50 L79.73,70.37 L71.76,70.37 Z " +
+            "M28.54,73.10 A8.81,6.93 -18 1 1 45.30,67.65 A8.81,6.93 -18 1 1 28.54,73.10 Z " +
+            "M62.53,73.10 A8.81,6.93 -18 1 1 79.30,67.65 A8.81,6.93 -18 1 1 62.53,73.10 Z"
+
+    private const val DUBTONIC_WAVE_PATH =
+        "M50.14,55.47 C51.06,52.70 52.09,52.70 53.01,55.47 C53.93,58.24 54.96,58.24 55.88,55.47 " +
+            "C56.79,50.86 57.83,50.86 58.75,55.47 C59.66,60.09 60.70,60.09 61.61,55.47 " +
+            "C62.53,52.01 63.56,52.01 64.48,55.47 C65.40,58.94 66.43,58.94 67.35,55.47"
 
     private fun icon(name: String, pathData: String): ImageVector =
         ImageVector.Builder(

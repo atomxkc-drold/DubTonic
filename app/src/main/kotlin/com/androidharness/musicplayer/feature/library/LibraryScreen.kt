@@ -35,6 +35,7 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
@@ -65,6 +66,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -74,8 +76,11 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.androidharness.musicplayer.ui.motion.motionBlurScroll
 import coil3.compose.AsyncImage
+import com.androidharness.musicplayer.feature.player.AudioQuality
 import com.androidharness.musicplayer.feature.player.MiniPlayer
 import com.androidharness.musicplayer.feature.player.PlayerViewModel
+import com.androidharness.musicplayer.feature.player.QualityBadge
+import com.androidharness.musicplayer.feature.player.audioQuality
 import com.androidharness.musicplayer.ui.chrome.ChromeBackdrop
 import com.androidharness.musicplayer.ui.chrome.ChromeTopBar
 import com.androidharness.musicplayer.ui.chrome.LocalChrome
@@ -330,6 +335,14 @@ private fun ColumnScope.TracksContent(
                             } else {
                                 LibraryIntent.Download(item.track.id)
                             }
+                        )
+                    },
+                    onThumbsUp = {
+                        onIntent(
+                            LibraryIntent.SetThumbsUp(
+                                trackId = item.track.id,
+                                up = item.track.rating <= 0,
+                            )
                         )
                     },
                 )
@@ -634,8 +647,10 @@ private fun TrackPill(
     onPlay: () -> Unit,
     onFavorite: () -> Unit,
     onDownload: () -> Unit,
+    onThumbsUp: () -> Unit,
 ) {
     var albumColor by remember(item.track.id) { mutableStateOf(DefaultArtColor) }
+    var menuOpen by remember { mutableStateOf(false) }
 
     LaunchedEffect(item.artworkUri) {
         albumColor = runCatching { colorFor(item.artworkUri) }
@@ -654,6 +669,17 @@ private fun TrackPill(
     )
 
     val shape = RoundedCornerShape(30.dp)
+    val track = item.track
+    // Bitrate only rides along when the row is wide enough for it; codec + duration
+    // come first so a narrow phone still shows what matters.
+    val wideRow = LocalConfiguration.current.screenWidthDp >= 400
+    val meta = listOfNotNull(
+        clockTime(track.durationMs),
+        track.format?.uppercase()?.takeIf { it.isNotBlank() },
+        track.bitrateKbps?.takeIf { it > 0 && wideRow }?.let { "$it kbps" },
+    ).joinToString(" · ")
+    val quality = track.audioQuality()
+    val ratedUp = track.rating > 0
 
     Row(
         modifier = Modifier
@@ -662,80 +688,169 @@ private fun TrackPill(
             .background(pillColor)
             .border(1.dp, borderColor, shape)
             .clickable(onClick = onPlay)
-            .padding(horizontal = 10.dp, vertical = 10.dp),
+            .padding(start = 10.dp, end = 6.dp, top = 10.dp, bottom = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         AlbumThumb(
             artworkUri = item.artworkUri,
             albumColor = albumColor,
-            title = item.track.title,
+            title = track.title,
+            size = 46.dp,
         )
 
         Column(
             modifier = Modifier
                 .weight(1f)
-                .padding(horizontal = 12.dp)
+                .padding(start = 10.dp),
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = item.track.title,
-                    color = InkText,
-                    style = MaterialTheme.typography.titleSmall,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                if (item.track.isDownloaded) {
-                    Spacer(Modifier.width(6.dp))
-                    Icon(
-                        imageVector = PlayerIcons.Download,
-                        contentDescription = null,
-                        tint = AccentTeal,
-                        modifier = Modifier.size(14.dp),
-                    )
-                }
-            }
             Text(
-                text = "${item.track.artist} · ${item.track.album}",
+                text = track.title,
+                color = InkText,
+                style = MaterialTheme.typography.titleSmall,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = "${track.artist} · ${track.album}",
                 color = InkText.copy(alpha = 0.55f),
                 style = MaterialTheme.typography.bodySmall,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
+
+            Spacer(Modifier.height(5.dp))
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = PlayerIcons.DubTonic,
+                    contentDescription = null,
+                    tint = InkText.copy(alpha = 0.7f),
+                    modifier = Modifier.size(14.dp),
+                )
+                Spacer(Modifier.width(5.dp))
+                Text(
+                    text = meta,
+                    color = InkText.copy(alpha = 0.6f),
+                    fontSize = 10.sp,
+                    letterSpacing = 0.2.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f),
+                )
+                if (quality != AudioQuality.UNKNOWN) {
+                    Spacer(Modifier.width(4.dp))
+                    QualityBadge(quality = quality)
+                }
+                Spacer(Modifier.width(2.dp))
+                MetaAction(
+                    icon = PlayerIcons.ThumbUp,
+                    contentDescription = if (ratedUp) "Remove thumbs up" else "Thumbs up",
+                    tint = if (ratedUp) AccentTeal else InkText.copy(alpha = 0.4f),
+                    onClick = onThumbsUp,
+                )
+                MetaAction(
+                    icon = if (track.isDownloaded) PlayerIcons.Check else PlayerIcons.Download,
+                    contentDescription = if (track.isDownloaded) {
+                        "Remove download"
+                    } else {
+                        "Download"
+                    },
+                    tint = if (track.isDownloaded) AccentTeal else InkText.copy(alpha = 0.5f),
+                    onClick = onDownload,
+                )
+            }
         }
 
-        IconButton(onClick = onFavorite, modifier = Modifier.size(36.dp)) {
-            Icon(
-                imageVector = if (item.track.isFavorite) {
-                    Icons.Filled.Favorite
-                } else {
-                    Icons.Filled.FavoriteBorder
-                },
-                contentDescription = "Favorite",
-                tint = if (item.track.isFavorite) StarYellow else InkText.copy(alpha = 0.4f),
-                modifier = Modifier.size(20.dp),
-            )
-        }
-        IconButton(onClick = onDownload, modifier = Modifier.size(36.dp)) {
-            Icon(
-                imageVector = if (item.track.isDownloaded) {
-                    PlayerIcons.Check
-                } else {
-                    PlayerIcons.Download
-                },
-                contentDescription = if (item.track.isDownloaded) {
-                    "Remove download"
-                } else {
-                    "Download"
-                },
-                tint = if (item.track.isDownloaded) {
-                    AccentTeal
-                } else {
-                    InkText.copy(alpha = 0.45f)
-                },
-                modifier = Modifier.size(20.dp),
-            )
+        Box {
+            IconButton(onClick = { menuOpen = true }, modifier = Modifier.size(34.dp)) {
+                Icon(
+                    imageVector = Icons.Filled.MoreVert,
+                    contentDescription = "More options for ${track.title}",
+                    tint = InkText.copy(alpha = 0.55f),
+                    modifier = Modifier.size(20.dp),
+                )
+            }
+            DropdownMenu(
+                expanded = menuOpen,
+                onDismissRequest = { menuOpen = false },
+                containerColor = PillBase,
+            ) {
+                TrackMenuItem(
+                    label = "Play now",
+                    icon = Icons.Filled.PlayArrow,
+                ) {
+                    menuOpen = false
+                    onPlay()
+                }
+                TrackMenuItem(
+                    label = if (track.isFavorite) "Remove from favorites" else "Add to favorites",
+                    icon = if (track.isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                ) {
+                    menuOpen = false
+                    onFavorite()
+                }
+                TrackMenuItem(
+                    label = if (track.isDownloaded) "Remove download" else "Download",
+                    icon = if (track.isDownloaded) PlayerIcons.Check else PlayerIcons.Download,
+                ) {
+                    menuOpen = false
+                    onDownload()
+                }
+                TrackMenuItem(
+                    label = if (ratedUp) "Remove thumbs up" else "Thumbs up",
+                    icon = PlayerIcons.ThumbUp,
+                ) {
+                    menuOpen = false
+                    onThumbsUp()
+                }
+            }
         }
     }
+}
+
+@Composable
+private fun MetaAction(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    contentDescription: String,
+    tint: Color,
+    onClick: () -> Unit,
+) {
+    IconButton(onClick = onClick, modifier = Modifier.size(28.dp)) {
+        Icon(
+            imageVector = icon,
+            contentDescription = contentDescription,
+            tint = tint,
+            modifier = Modifier.size(16.dp),
+        )
+    }
+}
+
+@Composable
+private fun TrackMenuItem(
+    label: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    onClick: () -> Unit,
+) {
+    DropdownMenuItem(
+        text = { Text(text = label, color = InkText) },
+        leadingIcon = {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = InkText.copy(alpha = 0.7f),
+                modifier = Modifier.size(18.dp),
+            )
+        },
+        onClick = onClick,
+    )
+}
+
+private fun clockTime(durationMs: Long): String? {
+    if (durationMs <= 0L) return null
+    val totalSeconds = durationMs / 1000L
+    val minutes = totalSeconds / 60L
+    val seconds = totalSeconds % 60L
+    return "%d:%02d".format(minutes, seconds)
 }
 
 @Composable
@@ -921,10 +1036,11 @@ private fun PlaylistPill(
                 .background(playlistColor.copy(alpha = 0.45f)),
             contentAlignment = Alignment.Center,
         ) {
-            Text(
-                text = "♪",
-                color = InkText,
-                style = MaterialTheme.typography.titleMedium,
+            Icon(
+                imageVector = PlayerIcons.DubTonic,
+                contentDescription = null,
+                tint = InkText.copy(alpha = 0.8f),
+                modifier = Modifier.size(26.dp),
             )
         }
 

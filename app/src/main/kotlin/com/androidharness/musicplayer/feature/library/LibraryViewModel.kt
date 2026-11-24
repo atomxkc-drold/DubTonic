@@ -61,6 +61,7 @@ sealed interface LibraryIntent {
     data class Play(val index: Int) : LibraryIntent
     data object Sync : LibraryIntent
     data class ToggleFavorite(val trackId: String, val favorite: Boolean) : LibraryIntent
+    data class SetThumbsUp(val trackId: String, val up: Boolean) : LibraryIntent
     data class Download(val trackId: String) : LibraryIntent
     data class RemoveDownload(val trackId: String) : LibraryIntent
     data class FilterChanged(val filter: LibraryFilter) : LibraryIntent
@@ -179,6 +180,10 @@ class LibraryViewModel @Inject constructor(
             is LibraryIntent.ToggleFavorite ->
                 viewModelScope.launch {
                     repository.toggleFavorite(intent.trackId, intent.favorite)
+                }
+            is LibraryIntent.SetThumbsUp ->
+                viewModelScope.launch {
+                    repository.setRating(intent.trackId, if (intent.up) 5 else 0)
                 }
             is LibraryIntent.Download -> download(intent.trackId)
             is LibraryIntent.RemoveDownload -> removeDownload(intent.trackId)
