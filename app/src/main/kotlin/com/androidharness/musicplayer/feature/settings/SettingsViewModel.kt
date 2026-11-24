@@ -139,6 +139,10 @@ class SettingsViewModel @Inject constructor(
         it.copy(ui = it.ui.copy(motionBlurIntensity = value.roundToInt()))
     }
 
+    fun setAudioCompatibilityMode(enabled: Boolean) = update {
+        it.copy(playback = it.playback.copy(audioCompatibilityMode = enabled))
+    }
+
     fun setWifiBufferMb(value: Float) = update {
         it.copy(playback = it.playback.copy(
             wifiBuffer = it.playback.wifiBuffer.copy(targetBufferMb = value.roundToInt())

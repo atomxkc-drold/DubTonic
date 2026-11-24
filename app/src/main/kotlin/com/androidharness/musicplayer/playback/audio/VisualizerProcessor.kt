@@ -1,7 +1,6 @@
 package com.androidharness.musicplayer.playback.audio
 
 import android.os.SystemClock
-import android.util.Log
 import androidx.media3.common.C
 import androidx.media3.common.audio.AudioProcessor.AudioFormat
 import androidx.media3.common.audio.BaseAudioProcessor
@@ -27,16 +26,14 @@ class VisualizerProcessor(
         if (inputAudioFormat.encoding != C.ENCODING_PCM_16BIT &&
             inputAudioFormat.encoding != C.ENCODING_PCM_FLOAT
         ) {
-            Log.i(
-                TAG,
+            AudioDiagnostics.record(
                 "tap bypass: rate=${inputAudioFormat.sampleRate} " +
                     "ch=${inputAudioFormat.channelCount} enc=${inputAudioFormat.encoding}",
             )
             return AudioFormat.NOT_SET
         }
         encoding = inputAudioFormat.encoding
-        Log.i(
-            TAG,
+        AudioDiagnostics.record(
             "tap ready: rate=${inputAudioFormat.sampleRate} " +
                 "ch=${inputAudioFormat.channelCount} enc=${inputAudioFormat.encoding}",
         )

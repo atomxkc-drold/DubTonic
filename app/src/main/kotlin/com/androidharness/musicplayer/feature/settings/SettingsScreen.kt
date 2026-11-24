@@ -209,6 +209,11 @@ fun SettingsScreen(
                             onCheckedChange = viewModel::setSkipSilence,
                         )
                         SwitchRow(
+                            title = "Audio compatibility mode",
+                            checked = settings.playback.audioCompatibilityMode,
+                            onCheckedChange = viewModel::setAudioCompatibilityMode,
+                        )
+                        SwitchRow(
                             title = "Pause when headphones unplug",
                             checked = settings.playback.pauseOnHeadphonesDisconnect,
                             onCheckedChange = viewModel::setPauseOnHeadphonesDisconnect,

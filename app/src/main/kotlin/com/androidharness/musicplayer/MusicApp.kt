@@ -11,6 +11,7 @@ import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
 import coil3.SingletonImageLoader
 import com.androidharness.musicplayer.data.sync.SyncScheduler
+import com.androidharness.musicplayer.playback.audio.AudioDiagnostics
 import com.androidharness.musicplayer.ui.image.AppImageLoader
 import dagger.hilt.android.HiltAndroidApp
 import java.io.File
@@ -49,6 +50,7 @@ class MusicApp : Application(), Configuration.Provider {
     override fun onCreate() {
         super.onCreate()
         SingletonImageLoader.setSafe { imageLoader.loader }
+        AudioDiagnostics.install(this)
         syncScheduler.schedule()
     }
 

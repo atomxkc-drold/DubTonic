@@ -23,3 +23,9 @@ captures/
 *.keystore
 *.p12
 keystore.properties
+
+# Shizuku rish helpers dropped into the repo root
+/rish
+/rish_shizuku.dex
+/plus
+/su

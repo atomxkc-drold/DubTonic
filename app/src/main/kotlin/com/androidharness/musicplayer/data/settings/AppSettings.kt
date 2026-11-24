@@ -13,7 +13,7 @@ data class AppSettings(
     val network: NetworkSettings = NetworkSettings(),
 ) {
     companion object {
-        const val CURRENT_SCHEMA_VERSION: Int = 4
+        const val CURRENT_SCHEMA_VERSION: Int = 5
     }
 }
 
@@ -42,6 +42,12 @@ data class PlaybackSettings(
     val pauseOnHeadphonesDisconnect: Boolean = true,
     val resumeQueueOnStart: Boolean = true,
     val crossfadeMs: Int = 0,
+    /**
+     * Bypass the custom audio sink and DSP chain entirely and let Media3 build its default
+     * software sink. A plain sink ruling the artifact out (or not) localises a pitch fault
+     * to our processor chain faster than reading logs.
+     */
+    val audioCompatibilityMode: Boolean = false,
     val replayGain: ReplayGainSettings = ReplayGainSettings(),
     val equalizer: EqualizerSettings = EqualizerSettings(),
 ) {

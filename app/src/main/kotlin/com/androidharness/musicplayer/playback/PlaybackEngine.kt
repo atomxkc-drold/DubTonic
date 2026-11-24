@@ -1,6 +1,7 @@
 package com.androidharness.musicplayer.playback
 
 import android.content.Context
+import android.media.AudioManager
 import androidx.annotation.OptIn
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
@@ -8,12 +9,14 @@ import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DataSource
+import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import com.androidharness.musicplayer.core.model.Track
 import com.androidharness.musicplayer.data.connectivity.ConnectivityMonitor
 import com.androidharness.musicplayer.domain.repository.SettingsRepository
 import com.androidharness.musicplayer.playback.audio.AudioLevelTap
+import com.androidharness.musicplayer.playback.audio.AudioDiagnostics
 import com.androidharness.musicplayer.playback.audio.DspRenderersFactory
 import com.androidharness.musicplayer.playback.audio.ParametricEqProcessor
 import com.androidharness.musicplayer.playback.audio.ReplayGainController
@@ -65,10 +68,18 @@ class PlaybackEngine @Inject constructor(
             .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC)
             .build()
 
-        val renderers = DspRenderersFactory(
-            context,
-            listOf(replayGain.newProcessor(), equalizer, VisualizerProcessor(audioLevelTap)),
-        ).setEnableAudioFloatOutput(true)
+        val compatibility = snapshot.playback.audioCompatibilityMode
+
+        val renderers = if (compatibility) {
+            // Plain Media3 sink: no float output and no custom processor chain. Either rules
+            // the DSP chain out of a pitch fault, or keeps the app usable while it is fixed.
+            DefaultRenderersFactory(context)
+        } else {
+            DspRenderersFactory(
+                context,
+                listOf(replayGain.newProcessor(), equalizer, VisualizerProcessor(audioLevelTap)),
+            ).setEnableAudioFloatOutput(true)
+        }
 
         val mediaSourceFactory = DefaultMediaSourceFactory(context)
             .setDataSourceFactory(dataSourceFactory)
@@ -86,6 +97,13 @@ class PlaybackEngine @Inject constructor(
                 skipSilenceEnabled = snapshot.playback.skipSilence
                 repeatMode = Player.REPEAT_MODE_OFF
             }
+
+        val audioManager = context.getSystemService(AudioManager::class.java)
+        AudioDiagnostics.record(
+            "player built compat=$compatibility" +
+                " nativeRate=${audioManager?.getProperty(AudioManager.PROPERTY_OUTPUT_SAMPLE_RATE)}" +
+                " burstFrames=${audioManager?.getProperty(AudioManager.PROPERTY_OUTPUT_FRAMES_PER_BUFFER)}",
+        )
 
         // ExoPlayer is built on the service's main thread and rejects calls from any
         // other thread, so every settings write that touches the player stays on Main.
