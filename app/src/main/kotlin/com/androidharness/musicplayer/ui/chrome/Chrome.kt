@@ -38,10 +38,12 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -312,14 +314,31 @@ fun ChromeChip(
     }
 }
 
-/** Small brand tile: blue square, lime note. Mirrors the launcher icon. */
+/** Launcher field colours: amber radial, matching ic_launcher_background. */
+private val IconFieldLight = Color(0xFFFFD470)
+private val IconFieldMid = Color(0xFFFBAF2B)
+private val IconFieldDeep = Color(0xFFE88A00)
+
+/**
+ * Small brand tile: amber field, azure beamed note, ink waveform.
+ * Layer for layer the same mark as the launcher icon, so the header and Settings
+ * crest never drift from what sits on the home screen.
+ */
 @Composable
 fun BrandMark(size: Dp = 44.dp, modifier: Modifier = Modifier) {
+    val field = with(LocalDensity.current) {
+        val extent = size.toPx()
+        Brush.radialGradient(
+            colors = listOf(IconFieldLight, IconFieldMid, IconFieldDeep),
+            center = Offset(extent * 0.5f, extent * 0.32f),
+            radius = extent * 0.82f,
+        )
+    }
     Box(
         modifier = modifier
             .size(size)
             .clip(RoundedCornerShape(size * 0.28f))
-            .background(BrandBlue),
+            .background(field),
         contentAlignment = Alignment.Center,
     ) {
         Image(
