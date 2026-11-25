@@ -9,6 +9,8 @@ import com.androidharness.musicplayer.data.remote.SubsonicUrls
 import com.androidharness.musicplayer.data.remote.validated
 import com.androidharness.musicplayer.data.settings.AppSettings
 import com.androidharness.musicplayer.data.settings.AudioCodec
+import com.androidharness.musicplayer.data.settings.HomeShelfMode
+import com.androidharness.musicplayer.data.settings.TimeMachineMotion
 import com.androidharness.musicplayer.data.settings.TranscodeProfile
 import com.androidharness.musicplayer.data.sync.SyncScheduler
 import com.androidharness.musicplayer.domain.repository.SettingsRepository
@@ -180,6 +182,18 @@ class SettingsViewModel @Inject constructor(
 
     fun setReducedMotion(enabled: Boolean) = update {
         it.copy(ui = it.ui.copy(reducedMotion = enabled))
+    }
+
+    fun setTimeMachineMotion(mode: TimeMachineMotion) = update {
+        it.copy(ui = it.ui.copy(timeMachineMotion = mode))
+    }
+
+    fun setHomeShelfOrder(order: List<String>) = update {
+        it.copy(ui = it.ui.copy(homeShelfOrder = order))
+    }
+
+    fun setHomeShelfMode(shelf: String, mode: HomeShelfMode) = update {
+        it.copy(ui = it.ui.copy(homeShelfModes = it.ui.homeShelfModes + (shelf to mode.name)))
     }
 
     fun setReplayGainEnabled(enabled: Boolean) = update {

@@ -72,6 +72,8 @@ class PlaybackService : MediaLibraryService() {
             crossfade.onTransition(engine.player)
             preloadNextArtwork()
             if (mediaItem != null) {
+                // A started track counts for Home's History, Top 10 and Discover shelves.
+                scope.launch { runCatching { musicRepository.recordPlay(mediaItem.mediaId) } }
                 scope.launch {
                     engine.onTrackChanged(runCatching { musicRepository.track(mediaItem.mediaId) }.getOrNull())
                 }

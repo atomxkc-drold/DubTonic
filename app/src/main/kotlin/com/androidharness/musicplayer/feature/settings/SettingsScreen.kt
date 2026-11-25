@@ -43,6 +43,7 @@ import com.androidharness.musicplayer.ui.motion.motionBlurScroll
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.androidharness.musicplayer.data.settings.AudioCodec
+import com.androidharness.musicplayer.data.settings.TimeMachineMotion
 import com.androidharness.musicplayer.ui.chrome.BrandMark
 import com.androidharness.musicplayer.ui.chrome.ChromeBackdrop
 import com.androidharness.musicplayer.ui.chrome.ChromeChip
@@ -154,6 +155,28 @@ fun SettingsScreen(
                             checked = settings.ui.reducedMotion,
                             onCheckedChange = viewModel::setReducedMotion,
                         )
+                        Text(
+                            text = "TIME MACHINE ART",
+                            color = chrome.muted,
+                            style = MaterialTheme.typography.labelSmall,
+                            fontFamily = FontFamily.Monospace,
+                            modifier = Modifier.padding(top = 10.dp, bottom = 6.dp),
+                        )
+                        Row(
+                            modifier = Modifier.horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            listOf(
+                                TimeMachineMotion.ORBIT to "Orbit",
+                                TimeMachineMotion.OFF to "Off",
+                            ).forEach { (mode, label) ->
+                                ChromeChip(
+                                    label = label,
+                                    selected = settings.ui.timeMachineMotion == mode,
+                                    onClick = { viewModel.setTimeMachineMotion(mode) },
+                                )
+                            }
+                        }
                         SwitchRow(
                             title = "Scroll motion blur",
                             checked = settings.ui.scrollMotionBlur,

@@ -123,7 +123,36 @@ data class UiSettings(
     val scrollMotionBlur: Boolean = true,
     /** Dial from 0 (off) to 100 (strongest). */
     val motionBlurIntensity: Int = 55,
+    /** How the Time Machine section dresses the era dial with album art. */
+    val timeMachineMotion: TimeMachineMotion = TimeMachineMotion.ORBIT,
+    /** Order of the Home shelf pills. Names are checked in SettingsEngine. */
+    val homeShelfOrder: List<String> = HomeShelfOrder.Default,
+    /** Display mode per shelf id: GRID, CARDS or COMPACT. */
+    val homeShelfModes: Map<String, String> = emptyMap(),
 )
+
+/** The shelves a user can swipe through on Home, in place of the mood launchpad. */
+enum class HomeShelf { HISTORY, FAVORITES, TOP10, PLAYLISTS, DISCOVER }
+
+object HomeShelfOrder {
+    val Default: List<String> = HomeShelf.entries.map { it.name }
+}
+
+/** How one shelf draws its items. Compact mirrors the Library track row. */
+enum class HomeShelfMode { GRID, CARDS, COMPACT }
+
+enum class TimeMachineMotion {
+    OFF,
+
+    /** One cover per decade, riding the same slow spin as the dial halo. */
+    ORBIT,
+
+    /** Covers drifting up over the top half of the ring. */
+    CASCADE,
+
+    /** Covers falling down the section, matrix style. */
+    RAIN,
+}
 
 @Serializable
 data class LibrarySettings(

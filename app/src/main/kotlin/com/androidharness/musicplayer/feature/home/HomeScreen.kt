@@ -67,6 +67,9 @@ import com.androidharness.musicplayer.ui.chrome.BrandMark
 import com.androidharness.musicplayer.ui.chrome.SectionLabel
 import com.androidharness.musicplayer.ui.chrome.SubsonicBrandHeader
 import com.androidharness.musicplayer.ui.icons.PlayerIcons
+import com.androidharness.musicplayer.core.model.Track
+import com.androidharness.musicplayer.data.settings.HomeShelf
+import com.androidharness.musicplayer.data.settings.HomeShelfOrder
 import com.androidharness.musicplayer.ui.theme.SpringSpecs
 
 @OptIn(ExperimentalSharedTransitionApi::class)
@@ -108,21 +111,82 @@ fun HomeScreen(
 
     val artwork = remember(tracks) { selectHomeArtwork(tracks).firstOrNull() }
     val buckets = remember(tracks) { eraBuckets(tracks, includeUndated = true) }
+    // Covers for the dial: up to a few albums per decade, including the undated pile.
+    val eraArt = remember(tracks, buckets) {
+        buckets.associate { bucket ->
+            bucket.startYear to tracksInEra(tracks, bucket).mapNotNull { track ->
+                val id = track.coverArtId?.takeIf { it.isNotBlank() } ?: return@mapNotNull null
+                val art = viewModel.artUri(id) ?: return@mapNotNull null
+                EraArtSource(
+                    album = track.album.ifBlank { track.title },
+                    year = track.year,
+                    art = art,
+                )
+            }
+        }
+    }
     val stacks = remember(tracks) { buildVibeStacks(tracks, limit = 6, minSize = 3) }
     val route = remember(tracks) { buildSonicFlow(tracks, maxTracks = 14) }
     var eraStart by rememberSaveable(tracks) { mutableStateOf<Int?>(null) }
-    var homeMood by rememberSaveable { mutableStateOf(Moods.ALL) }
     val selectedEra = buckets.firstOrNull { it.startYear == eraStart } ?: buckets.maxByOrNull { it.count }
 
-    val moodPool = remember(tracks, homeMood) { tracksForMood(tracks, homeMood) }
-    val moodStacks = remember(moodPool, stacks) {
-        val ids = moodPool.mapTo(HashSet()) { it.id }
-        stacks.filter { stack -> stack.trackIds.any { it in ids } }.ifEmpty { stacks }
+    // Home shelves: user order first, anything unknown appended by SettingsEngine.
+    val shelfOrder = remember(ui.homeShelfOrder) {
+        ui.homeShelfOrder.mapNotNull { name -> HomeShelf.entries.firstOrNull { it.name == name } }
+            .ifEmpty { HomeShelfOrder.Default.mapNotNull { n -> HomeShelf.entries.firstOrNull { it.name == n } } }
     }
-    val moodBuckets = remember(moodPool, buckets) {
-        eraBuckets(moodPool, includeUndated = true).ifEmpty { buckets }
+    var shelf by rememberSaveable { mutableStateOf(HomeShelf.HISTORY.name) }
+    val activeShelf = shelfOrder.firstOrNull { it.name == shelf } ?: shelfOrder.first()
+    val history by viewModel.history.collectAsStateWithLifecycle()
+    val topPlayed by viewModel.topPlayed.collectAsStateWithLifecycle()
+    val neverPlayed by viewModel.neverPlayed.collectAsStateWithLifecycle()
+    val playlists by viewModel.playlists.collectAsStateWithLifecycle()
+
+    val liked = remember(tracks) { tracks.filter { it.isFavorite } }
+    val discoverPool = remember(neverPlayed, tracks) {
+        neverPlayed.ifEmpty { tracks.shuffled().take(24) }
+    }
+    // Playlists the server has, plus mixes suggested from what is already here.
+    val shelfPlaylists = remember(playlists, stacks) {
+        val own = playlists.map { playlist ->
+            ShelfItem(
+                id = playlist.id,
+                title = playlist.name,
+                subtitle = "${playlist.songCount} tracks",
+            ) { viewModel.playPlaylist(playlist.id) }
+        }
+        val suggested = stacks.take(3).map { stack ->
+            ShelfItem(
+                id = "suggested-${stack.id}",
+                title = stack.title,
+                subtitle = "${stack.trackIds.size} tracks · suggested",
+                art = viewModel.artUri(stack.coverArtIds.firstOrNull()),
+                queue = stack.trackIds,
+                onClick = { viewModel.playStack(stack) },
+            )
+        }
+        own + suggested
     }
 
+    val trackItems: (List<Track>) -> List<ShelfItem> = { source ->
+        source.map { track ->
+            track.toShelfItem(viewModel.artUri(track.coverArtId)) { viewModel.playTrack(track) }
+        }
+    }
+
+    val shelfItems: (HomeShelf) -> List<ShelfItem> = { target ->
+        when (target) {
+            HomeShelf.HISTORY -> trackItems(history)
+            HomeShelf.FAVORITES -> trackItems(liked)
+            HomeShelf.TOP10 -> trackItems(topPlayed).mapIndexed { index, item ->
+                item.copy(badge = "${index + 1}")
+            }
+            HomeShelf.PLAYLISTS -> shelfPlaylists
+            HomeShelf.DISCOVER -> trackItems(discoverPool)
+        }
+    }
+
+    // Shelf accents follow the same ramp the shelves always used.
     val accentFor: (Int) -> Color = remember(aurora, dark) {
         { index ->
             val ramp = listOf(aurora.blobs[0], aurora.blobs[1], aurora.glow, aurora.blobs[2])
@@ -130,57 +194,6 @@ fun HomeScreen(
             if (dark) tint else lerp(tint, Color(0xFF0E2A24), 0.35f)
         }
     }
-
-    // Launchpad tiles: the same mixes the shelves below offer, but as one tap targets.
-    val launchTiles = buildList {
-        add(
-            LaunchTile(
-                id = "flow",
-                label = "Sonic Flow",
-                artwork = viewModel.artUri(route.firstOrNull()?.coverArtId),
-                accent = accent,
-            ) { viewModel.playFlow(playback.trackId) }
-        )
-        add(
-            LaunchTile(
-                id = "liked",
-                label = "Liked Music",
-                artwork = null,
-                accent = accent,
-                icon = Icons.Filled.ThumbUp,
-            ) { viewModel.playLiked() }
-        )
-        add(
-            LaunchTile(
-                id = "recent",
-                label = "New Release Mix",
-                artwork = viewModel.artUri(moodPool.maxByOrNull { it.addedAtMs }?.coverArtId),
-                accent = accent,
-            ) { viewModel.playRecent() }
-        )
-        moodStacks.take(4).forEachIndexed { index, stack ->
-            add(
-                LaunchTile(
-                    id = "stack-${stack.id}",
-                    label = stack.title,
-                    artwork = viewModel.artUri(stack.coverArtIds.firstOrNull()),
-                    accent = accentFor(index),
-                ) { viewModel.playStack(stack) }
-            )
-        }
-        moodBuckets.take(4).forEachIndexed { index, bucket ->
-            add(
-                LaunchTile(
-                    id = "era-${bucket.startYear}",
-                    label = bucket.label,
-                    artwork = viewModel.artUri(
-                        tracksInEra(moodPool, bucket).firstOrNull()?.coverArtId
-                    ),
-                    accent = accentFor(index),
-                ) { viewModel.playEra(bucket) }
-            )
-        }
-    }.take(12)
 
     Box(modifier = Modifier.fillMaxSize().background(base)) {
         HomeBackdrop(
@@ -315,14 +328,18 @@ fun HomeScreen(
 
                 Spacer(Modifier.height(18.dp))
 
-                HomeLaunchpad(
-                    tiles = launchTiles,
-                    selectedMood = homeMood,
-                    onMoodSelected = { homeMood = it },
-                    onOpenSettings = onOpenSettings,
+                HomeShelfPages(
+                    shelves = shelfOrder,
+                    selected = activeShelf,
+                    modes = ui.homeShelfModes,
                     accent = accent,
                     ink = ink,
                     muted = muted,
+                    content = shelfItems,
+                    onSelect = { shelf = it.name },
+                    onReorder = { order -> viewModel.setHomeShelfOrder(order.map { it.name }) },
+                    onModeChange = { target, mode -> viewModel.setHomeShelfMode(target.name, mode) },
+                    onPlayAll = { _, items -> viewModel.playTracksByIds(items.flatMap { it.queue }) },
                 )
 
                 Spacer(Modifier.height(22.dp))
@@ -407,6 +424,8 @@ fun HomeScreen(
                             ink = ink,
                             muted = muted,
                             animate = animate,
+                            motion = ui.timeMachineMotion,
+                            eraArt = eraArt,
                             onSelect = { eraStart = it.startYear },
                             onPlay = viewModel::playEra,
                         )

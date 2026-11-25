@@ -12,8 +12,10 @@ import com.androidharness.musicplayer.data.cache.AudioCacheEvictor
 import com.androidharness.musicplayer.data.connectivity.ConnectivityMonitor
 import com.androidharness.musicplayer.data.local.dao.AlbumDao
 import com.androidharness.musicplayer.data.local.dao.ArtistDao
+import com.androidharness.musicplayer.data.local.dao.PlayStatsDao
 import com.androidharness.musicplayer.data.local.dao.PlaylistDao
 import com.androidharness.musicplayer.data.local.dao.TrackDao
+import com.androidharness.musicplayer.data.local.entity.PlayStatsEntity
 import com.androidharness.musicplayer.data.local.toEntity
 import com.androidharness.musicplayer.data.local.toModel
 import com.androidharness.musicplayer.data.remote.SubsonicApi
@@ -49,6 +51,7 @@ class SubsonicMusicRepository @Inject constructor(
     private val albumDao: AlbumDao,
     private val artistDao: ArtistDao,
     private val playlistDao: PlaylistDao,
+    private val playStatsDao: PlayStatsDao,
     private val api: SubsonicApi,
     private val urls: SubsonicUrls,
     private val credentials: SubsonicCredentialsStore,
@@ -72,6 +75,23 @@ class SubsonicMusicRepository @Inject constructor(
 
     override fun observePlaylistTracks(playlistId: String): Flow<List<Track>> =
         playlistDao.observeTracks(playlistId).map { entities -> entities.map { it.toModel() } }
+
+    override fun observeTopPlayed(limit: Int): Flow<List<Track>> =
+        playStatsDao.observeTopPlayed(limit).map { entities -> entities.map { it.toModel() } }
+
+    override fun observeRecentlyPlayed(limit: Int): Flow<List<Track>> =
+        playStatsDao.observeRecentlyPlayed(limit).map { entities -> entities.map { it.toModel() } }
+
+    override fun observeNeverPlayed(limit: Int): Flow<List<Track>> =
+        playStatsDao.observeUnplayed(limit).map { entities -> entities.map { it.toModel() } }
+
+    override suspend fun recordPlay(trackId: String) {
+        if (trackId.isBlank()) return
+        val now = System.currentTimeMillis()
+        if (playStatsDao.bump(trackId, now) == 0) {
+            playStatsDao.insert(PlayStatsEntity(trackId = trackId, playCount = 1, lastPlayedAtMs = now))
+        }
+    }
 
     override fun search(query: String): Flow<List<Track>> {
         val ftsQuery = query.toFtsQuery()

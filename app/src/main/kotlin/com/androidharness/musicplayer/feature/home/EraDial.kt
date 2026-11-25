@@ -32,7 +32,13 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -49,8 +55,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.clickable
 import androidx.compose.ui.graphics.graphicsLayer
+import com.androidharness.musicplayer.data.settings.TimeMachineMotion
 import kotlin.math.atan2
 import kotlin.math.hypot
+import kotlin.random.Random
+import kotlinx.coroutines.delay
 
 /**
  * The Era Dial: the whole library bent into a ring of decades. Tap anywhere on the
@@ -58,23 +67,82 @@ import kotlin.math.hypot
  * section never looks static, without stealing drag gestures from the page scroll.
  */
 @Composable
-fun EraDial(
+internal fun EraDial(
     buckets: List<EraBucket>,
     selected: EraBucket?,
     accent: Color,
     ink: Color,
     muted: Color,
     animate: Boolean,
+    motion: TimeMachineMotion,
+    eraArt: Map<Int, List<EraArtSource>>,
     onSelect: (EraBucket) -> Unit,
     onPlay: (EraBucket) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     if (buckets.isEmpty()) return
 
+    // One clock for the ring halo and the orbiting covers, so they cannot drift apart.
+    val spin: State<Float> = if (animate && motion != TimeMachineMotion.OFF) {
+        rememberInfiniteTransition(label = "dial").animateFloat(
+            initialValue = 0f,
+            targetValue = 360f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(durationMillis = 90_000, easing = LinearEasing),
+            ),
+            label = "dialSpin",
+        )
+    } else {
+        remember { mutableFloatStateOf(0f) }
+    }
+    val seed = remember { Random.nextLong() }
+    // Tapping a cover pins its album and year on screen, then the random cycle resumes.
+    var manual by remember { mutableStateOf<EraArtTile?>(null) }
+    LaunchedEffect(manual) {
+        if (manual != null) {
+            delay(5_000)
+            manual = null
+        }
+    }
+    val tiles = remember(buckets, eraArt, seed) {
+        eraArtTiles(buckets, eraArt, Random(seed))
+    }
+    // A fresh set of covers each time the section opens, so the dial never looks identical.
+    val featured = if (motion == TimeMachineMotion.ORBIT) {
+        val auto = rememberEraArtFeature(
+            tiles = tiles,
+            animate = animate,
+            paused = manual != null,
+        )
+        manual ?: auto
+    } else {
+        null
+    }
+
     Column(modifier = modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
         Box(
             modifier = Modifier
-                .size(238.dp)
+                .size(288.dp)
+                .pointerInput(buckets, tiles) {
+                    detectTapGestures { position ->
+                        val center = Offset(size.width / 2f, size.height / 2f)
+                        val distance = hypot(position.x - center.x, position.y - center.y)
+                        val outer = minOf(size.width, size.height) / 2f
+                        val ringEdge = outer * 0.83f
+                        val degrees = Math.toDegrees(
+                            atan2(position.y - center.y, position.x - center.x).toDouble()
+                        ).toFloat()
+                        if (distance <= ringEdge) {
+                            // Ring band: pick the decade under the finger.
+                            if (distance < outer * 0.34f) return@detectTapGestures
+                            eraAtAngle(buckets, degrees + 90f - spin.value)?.let(onSelect)
+                        } else if (distance <= outer) {
+                            // Cover band: spotlight that album, then resume the random cycle.
+                            val ringFrame = degrees + 90f - spin.value
+                            nearestEraArtTile(tiles, ringFrame)?.let { manual = it }
+                        }
+                    }
+                }
                 .semantics {
                     contentDescription = "Era dial. Selected ${selected?.label ?: "nothing"}."
                 },
@@ -86,7 +154,19 @@ fun EraDial(
                 accent = accent,
                 ink = ink,
                 animate = animate,
+                spin = spin,
                 onSelect = onSelect,
+                modifier = Modifier.size(238.dp),
+            )
+            EraArtLayer(
+                mode = motion,
+                tiles = tiles,
+                spin = spin,
+                featured = featured,
+                selectedStartYear = selected?.startYear,
+                accent = accent,
+                ink = ink,
+                onTileTap = { manual = it },
             )
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
@@ -111,6 +191,9 @@ fun EraDial(
                 )
             }
         }
+
+        Spacer(Modifier.height(10.dp))
+        EraArtSpotlight(tile = featured, accent = accent, ink = ink)
 
         Spacer(Modifier.height(16.dp))
 
@@ -191,7 +274,9 @@ private fun EraRing(
     accent: Color,
     ink: Color,
     animate: Boolean,
+    spin: State<Float>,
     onSelect: (EraBucket) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val selectedSweep by animateFloatAsState(
         targetValue = selected?.sweepDegrees ?: 0f,
@@ -199,35 +284,9 @@ private fun EraRing(
         label = "eraSweep",
     )
 
-    val spin: Float by if (animate) {
-        rememberInfiniteTransition(label = "dial").animateFloat(
-            initialValue = 0f,
-            targetValue = 360f,
-            animationSpec = infiniteRepeatable(
-                animation = tween(durationMillis = 90_000, easing = LinearEasing),
-            ),
-            label = "dialSpin",
-        )
-    } else {
-        androidx.compose.runtime.remember { androidx.compose.runtime.mutableFloatStateOf(0f) }
-    }
-
     Canvas(
-        modifier = Modifier
-            .fillMaxSize()
-            .pointerInput(buckets) {
-                detectTapGestures { position ->
-                    val center = Offset(size.width / 2f, size.height / 2f)
-                    val distance = hypot(position.x - center.x, position.y - center.y)
-                    val outer = minOf(size.width, size.height) / 2f
-                    if (distance < outer * 0.34f || distance > outer) return@detectTapGestures
-                    val degrees = Math.toDegrees(
-                        atan2(position.y - center.y, position.x - center.x).toDouble()
-                    ).toFloat()
-                    // The ring starts at twelve o'clock, so shift the raw touch angle.
-                    eraAtAngle(buckets, degrees + 90f)?.let(onSelect)
-                }
-            },
+        modifier = modifier
+            .fillMaxSize(),
     ) {
         val outer = size.minDimension / 2f
         val ringRadius = outer - 14.dp.toPx()
@@ -251,7 +310,7 @@ private fun EraRing(
             if (isSelected) {
                 drawArc(
                     color = accent.copy(alpha = 0.22f),
-                    startAngle = -90f + bucket.startDegrees,
+                    startAngle = -90f + bucket.startDegrees + spin.value,
                     sweepAngle = sweep,
                     useCenter = false,
                     topLeft = topLeft,
@@ -262,7 +321,7 @@ private fun EraRing(
 
             drawArc(
                 color = if (isSelected) accent else ink.copy(alpha = baseAlpha),
-                startAngle = -90f + bucket.startDegrees,
+                startAngle = -90f + bucket.startDegrees + spin.value,
                 sweepAngle = sweep,
                 useCenter = false,
                 topLeft = topLeft,
@@ -277,7 +336,7 @@ private fun EraRing(
         if (selected != null && selectedSweep > 0f) {
             drawArc(
                 color = Color.White.copy(alpha = 0.18f),
-                startAngle = -90f + selected.startDegrees,
+                startAngle = -90f + selected.startDegrees + spin.value,
                 sweepAngle = (selectedSweep - 2.4f).coerceAtLeast(0.6f),
                 useCenter = false,
                 topLeft = topLeft,
@@ -286,10 +345,10 @@ private fun EraRing(
             )
         }
 
-        // Rotating dashed halo, decorative only.
+        // Rotating dashed halo, decorative only. It shares the ring's spin.
         val dashes = 44
         for (index in 0 until dashes) {
-            val angle = Math.toRadians((index * 360f / dashes + spin).toDouble())
+            val angle = Math.toRadians((index * 360f / dashes + spin.value).toDouble())
             val inner = ringRadius + 9.dp.toPx()
             val outerRadius = ringRadius + 13.dp.toPx()
             drawLine(

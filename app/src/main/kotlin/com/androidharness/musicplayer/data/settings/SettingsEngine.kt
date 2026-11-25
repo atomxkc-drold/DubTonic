@@ -105,7 +105,27 @@ object SettingsEngine {
         glassAlpha = glassAlpha.finite(0.18f).coerceIn(0f, 1f),
         animationScale = animationScale.finite(1f).coerceIn(0.25f, 2f),
         motionBlurIntensity = motionBlurIntensity.coerceIn(0, 100),
+        homeShelfOrder = homeShelfOrder.normalized(),
+        homeShelfModes = homeShelfModes.normalized(),
     )
+
+    /**
+     * The pill order is user data, so a hand-edited or older file must not be able to break it:
+     * unknown ids are dropped, missing ones are appended, and duplicates collapse to one.
+     */
+    private fun List<String>.normalized(): List<String> {
+        val known = HomeShelfOrder.Default.toSet()
+        val kept = filter { it in known }.distinct()
+        return if (kept.size == known.size) kept else kept + HomeShelfOrder.Default.filterNot { it in kept }
+    }
+
+    private fun Map<String, String>.normalized(): Map<String, String> {
+        val known = HomeShelfOrder.Default.toSet()
+        val modes = HomeShelfMode.entries.map { it.name }.toSet()
+        return keys.filter { it in known }
+            .map { key -> key to (get(key)?.takeIf { it in modes } ?: HomeShelfMode.GRID.name) }
+            .toMap()
+    }
 
     private fun LibrarySettings.normalized(): LibrarySettings = copy(
         syncIntervalMinutes = syncIntervalMinutes.coerceIn(15, 10_080),

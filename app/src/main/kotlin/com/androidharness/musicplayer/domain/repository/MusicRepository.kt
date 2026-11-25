@@ -24,6 +24,18 @@ interface MusicRepository {
 
     fun observePlaylistTracks(playlistId: String): Flow<List<Track>>
 
+    /** Tracks ordered by how often they were started, most played first. */
+    fun observeTopPlayed(limit: Int): Flow<List<Track>>
+
+    /** Tracks ordered by the last time they were started, newest first. */
+    fun observeRecentlyPlayed(limit: Int): Flow<List<Track>>
+
+    /** Tracks that were never started, newest additions first. */
+    fun observeNeverPlayed(limit: Int): Flow<List<Track>>
+
+    /** Counts a track start for History, Top 10 and Discover. */
+    suspend fun recordPlay(trackId: String)
+
     fun search(query: String): Flow<List<Track>>
 
     suspend fun track(id: String): Track?
@@ -43,5 +55,4 @@ interface MusicRepository {
     suspend fun removeDownload(trackId: String)
 
     /** Reports a completed play to the Subsonic server (scrobble). Best effort. */
-    suspend fun scrobble(trackId: String)
-}
+    suspend fun scrobble(trackId: String)}

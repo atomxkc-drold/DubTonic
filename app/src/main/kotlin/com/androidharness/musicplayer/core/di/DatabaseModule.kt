@@ -7,6 +7,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 import com.androidharness.musicplayer.data.local.MusicDatabase
 import com.androidharness.musicplayer.data.local.dao.AlbumDao
 import com.androidharness.musicplayer.data.local.dao.ArtistDao
+import com.androidharness.musicplayer.data.local.dao.PlayStatsDao
 import com.androidharness.musicplayer.data.local.dao.PlaylistDao
 import com.androidharness.musicplayer.data.local.dao.TrackDao
 import dagger.Module
@@ -37,6 +38,19 @@ object DatabaseModule {
         }
     }
 
+    /** v4 adds the play history table that feeds History, Top 10 and Discover. */
+    val MIGRATION_3_4 = object : Migration(3, 4) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                "CREATE TABLE IF NOT EXISTS `play_stats` (" +
+                    "`trackId` TEXT NOT NULL, " +
+                    "`playCount` INTEGER NOT NULL, " +
+                    "`lastPlayedAtMs` INTEGER NOT NULL, " +
+                    "PRIMARY KEY(`trackId`))"
+            )
+        }
+    }
+
     @Provides
     @Singleton
     fun provideDatabase(
@@ -46,7 +60,7 @@ object DatabaseModule {
         MusicDatabase::class.java,
         MusicDatabase.NAME,
     )
-        .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+        .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
         .build()
 
     @Provides
@@ -60,4 +74,7 @@ object DatabaseModule {
 
     @Provides
     fun providePlaylistDao(database: MusicDatabase): PlaylistDao = database.playlistDao()
+
+    @Provides
+    fun providePlayStatsDao(database: MusicDatabase): PlayStatsDao = database.playStatsDao()
 }

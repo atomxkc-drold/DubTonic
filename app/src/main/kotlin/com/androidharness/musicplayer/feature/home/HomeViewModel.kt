@@ -6,10 +6,12 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
+import com.androidharness.musicplayer.core.model.Playlist
 import com.androidharness.musicplayer.core.model.Track
 import com.androidharness.musicplayer.data.remote.SubsonicCredentialsStore
 import com.androidharness.musicplayer.data.remote.SubsonicSession
 import com.androidharness.musicplayer.data.remote.SubsonicUrls
+import com.androidharness.musicplayer.data.settings.HomeShelfMode
 import com.androidharness.musicplayer.data.settings.UiSettings
 import com.androidharness.musicplayer.domain.repository.MusicRepository
 import com.androidharness.musicplayer.domain.repository.SettingsRepository
@@ -23,6 +25,7 @@ import javax.inject.Inject
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -31,12 +34,18 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import kotlin.random.Random
 
 data class HomeClock(val hour: Int, val minute: Int)
 
 /** How many covers the Home fan deck draws from the library per app launch. */
 private const val FAN_SIZE = 24
+
+/** How many rows each Home shelf draws. */
+private const val HISTORY_SIZE = 30
+private const val TOP_SIZE = 10
+private const val DISCOVER_SIZE = 24
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
@@ -45,7 +54,7 @@ class HomeViewModel @Inject constructor(
     private val urls: SubsonicUrls,
     private val connection: PlaybackConnection,
     private val paletteRepository: AlbumPaletteRepository,
-    settingsRepository: SettingsRepository,
+    private val settingsRepository: SettingsRepository,
     credentials: SubsonicCredentialsStore,
 ) : ViewModel() {
 
@@ -53,6 +62,19 @@ class HomeViewModel @Inject constructor(
     val session: StateFlow<SubsonicSession?> = credentials.session
 
     val tracks = repository.observeTracks()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    /** Home shelves: what was played last, what is loved, what wins, what is next. */
+    val history: StateFlow<List<Track>> = repository.observeRecentlyPlayed(HISTORY_SIZE)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    val topPlayed: StateFlow<List<Track>> = repository.observeTopPlayed(TOP_SIZE)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    val neverPlayed: StateFlow<List<Track>> = repository.observeNeverPlayed(DISCOVER_SIZE)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    val playlists: StateFlow<List<Playlist>> = repository.observePlaylists()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     val playback: StateFlow<PlaybackUiState> = connection.state
@@ -139,6 +161,45 @@ class HomeViewModel @Inject constructor(
     fun playStack(stack: VibeStack) {
         val byId = tracks.value.associateBy { it.id }
         play(stack.trackIds.mapNotNull { byId[it] }, shuffle = false)
+    }
+
+    /** Home shelf rows: play one album on tap, the whole shelf from its header. */
+    fun playTrack(track: Track) {
+        val library = tracks.value
+        if (library.isEmpty()) return
+        val start = library.indexOfFirst { it.id == track.id }.takeIf { it >= 0 } ?: 0
+        play(library.drop(start), shuffle = false)
+    }
+
+    fun playTracks(list: List<Track>, shuffle: Boolean = false) {
+        play(list, shuffle = shuffle)
+    }
+
+    /** Plays a shelf header: the queue the items carry, in the order they are shown. */
+    fun playTracksByIds(ids: List<String>) {
+        if (ids.isEmpty()) return
+        val byId = tracks.value.associateBy { it.id }
+        play(ids.mapNotNull { byId[it] }, shuffle = false)
+    }
+
+    /** A server playlist: its tracks are read once and queued as they are stored. */
+    fun playPlaylist(playlistId: String) {
+        viewModelScope.launch {
+            play(repository.observePlaylistTracks(playlistId).first(), shuffle = false)
+        }
+    }
+
+    /** Pill order and per-shelf view mode are user preferences, saved as they change. */
+    fun setHomeShelfOrder(order: List<String>) {
+        viewModelScope.launch { settingsRepository.update { it.copy(ui = it.ui.copy(homeShelfOrder = order)) } }
+    }
+
+    fun setHomeShelfMode(shelf: String, mode: HomeShelfMode) {
+        viewModelScope.launch {
+            settingsRepository.update {
+                it.copy(ui = it.ui.copy(homeShelfModes = it.ui.homeShelfModes + (shelf to mode.name)))
+            }
+        }
     }
 
     private fun play(list: List<Track>, shuffle: Boolean) {
