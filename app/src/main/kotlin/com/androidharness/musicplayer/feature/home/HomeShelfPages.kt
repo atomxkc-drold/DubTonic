@@ -1,3 +1,5 @@
+package com.androidharness.musicplayer.feature.home
+
 /* HomeShelfPages.kt - Pill row with full text display
  * 
  * This file contains the pill row implementation that allows horizontal swiping
@@ -44,6 +46,21 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import coil3.compose.AsyncImage
 import com.androidharness.musicplayer.core.model.Track
 import com.androidharness.musicplayer.data.settings.HomeShelf
 import com.androidharness.musicplayer.data.settings.HomeShelfMode
@@ -288,7 +305,7 @@ private fun ShelfPill(
     }
 }
 
-## Per-shelf display switch: tile grid, vertical cards, or the compact library row.
+/** Per-shelf display switch: tile grid, vertical cards, or the compact library row. */
 @Composable
 private fun ShelfModeBar(
     mode: HomeShelfMode,

@@ -148,14 +148,15 @@ fun HomeScreen(
     }
     // Playlists the server has, plus mixes suggested from what is already here.
     val shelfPlaylists = remember(playlists, stacks) {
-        val own = playlists.map { playlist ->
+        val own: List<ShelfItem> = playlists.map { playlist ->
             ShelfItem(
                 id = playlist.id,
                 title = playlist.name,
                 subtitle = "${playlist.songCount} tracks",
-            ) { viewModel.playPlaylist(playlist.id) }
+                onClick = { viewModel.playPlaylist(playlist.id) },
+            )
         }
-        val suggested = stacks.take(3).map { stack ->
+        val suggested: List<ShelfItem> = stacks.take(3).map { stack ->
             ShelfItem(
                 id = "suggested-${stack.id}",
                 title = stack.title,
