@@ -343,27 +343,26 @@ private fun BoxScope.ArtworkBackdrop(uri: Uri?) {
         )
     )
 
-    Box(Modifier.fillMaxWidth().fillMaxHeight(0.52f).align(Alignment.TopCenter)) {
+    Box(Modifier.fillMaxWidth().fillMaxHeight(0.44f).align(Alignment.TopCenter)) {
         AsyncImage(
             model = uri,
             contentDescription = null,
             contentScale = ContentScale.Crop,
             modifier = Modifier.fillMaxSize(),
         )
-        // Feather the bottom edge into the blurred reflection below. The wash is layered over
-        // the artwork and blurred so the cover melts into the reflection instead of ending on a
-        // straight line.
+        // Bring the blurred reflection up over the bottom edge of the cover so it melts into
+        // the reflection below instead of ending on a hard line.
         Box(
             Modifier
                 .fillMaxSize()
                 .background(
                     Brush.verticalGradient(
                         0f to Color.Transparent,
-                        0.35f to Color.Black.copy(alpha = 0.32f),
+                        0.30f to Color.Black.copy(alpha = 0.40f),
                         1f to Color.Black,
                     )
                 )
-                .blur(18.dp),
+                .blur(26.dp),
         )
     }
 }
