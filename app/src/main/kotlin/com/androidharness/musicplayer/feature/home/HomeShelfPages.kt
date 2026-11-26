@@ -13,6 +13,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -195,7 +197,9 @@ private fun ShelfPills(
     val minTouch = with(density) { 8.dp.toPx() }
 
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .horizontalScroll(rememberScrollState())
+            .padding(horizontal = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         shelves.forEachIndexed { index, shelf ->
@@ -293,6 +297,9 @@ private fun ShelfPill(
             style = MaterialTheme.typography.labelLarge,
             fontFamily = FontFamily.Monospace,
             fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+            maxLines = 1,
+            softWrap = false,
+            overflow = TextOverflow.Ellipsis,
         )
         if (count != null) {
             Text(
@@ -300,6 +307,8 @@ private fun ShelfPill(
                 color = if (selected) Color(0xFF0B0F0E).copy(alpha = 0.6f) else muted,
                 style = MaterialTheme.typography.labelSmall,
                 fontFamily = FontFamily.Monospace,
+                maxLines = 1,
+                softWrap = false,
             )
         }
     }
