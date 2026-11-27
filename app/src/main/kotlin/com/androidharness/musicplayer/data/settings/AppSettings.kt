@@ -112,6 +112,29 @@ enum class PaletteMode {
 }
 
 @Serializable
+enum class CodecDisplayMode {
+    RAW_CONTAINER,
+    SIMPLIFIED,
+    HIGHLIGHTED,
+}
+
+@Serializable
+enum class TimeMachineLens {
+    SONG_YEAR,
+    DATE_ADDED,
+    GENRE,
+    USER_PLAYS,
+    GLOBAL_STREAMS,
+}
+
+@Serializable
+enum class UndatedTrackMode {
+    HIDDEN,
+    INCLUDED,
+    ONLY,
+}
+
+@Serializable
 data class UiSettings(
     val blurRadiusDp: Int = 40,
     val saturation: Float = 1.05f,
@@ -129,6 +152,19 @@ data class UiSettings(
     val homeShelfOrder: List<String> = HomeShelfOrder.Default,
     /** Display mode per shelf id: GRID, CARDS or COMPACT. */
     val homeShelfModes: Map<String, String> = emptyMap(),
+    /** Strength of extracted album colors, from neutral glass to vivid accents. */
+    val tintIntensity: Float = 1f,
+    /** Blur applied to full-screen artwork backdrops. */
+    val backdropBlurRadiusDp: Int = 38,
+    /** Blocks uncached external artwork, metadata and audio requests. */
+    val privacyKillSwitch: Boolean = false,
+    /** Pre-caches favorites and recently played tracks for offline playback. */
+    val smartOfflineBuffer: Boolean = false,
+    val timeMachineLens: TimeMachineLens = TimeMachineLens.SONG_YEAR,
+    val undatedTrackMode: UndatedTrackMode = UndatedTrackMode.HIDDEN,
+    val globalStreamsOptIn: Boolean = false,
+    val ringSpinSensitivity: Float = 1f,
+    val codecDisplayMode: CodecDisplayMode = CodecDisplayMode.RAW_CONTAINER,
 )
 
 /** The shelves a user can swipe through on Home, in place of the mood launchpad. */

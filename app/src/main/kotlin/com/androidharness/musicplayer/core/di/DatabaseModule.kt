@@ -51,6 +51,13 @@ object DatabaseModule {
         }
     }
 
+    /** v5 caches the server play count used by the User Plays Time Machine lens. */
+    val MIGRATION_4_5 = object : Migration(4, 5) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE tracks ADD COLUMN serverPlayCount INTEGER NOT NULL DEFAULT 0")
+        }
+    }
+
     @Provides
     @Singleton
     fun provideDatabase(
@@ -60,7 +67,7 @@ object DatabaseModule {
         MusicDatabase::class.java,
         MusicDatabase.NAME,
     )
-        .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+        .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
         .build()
 
     @Provides

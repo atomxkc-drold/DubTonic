@@ -105,6 +105,9 @@ object SettingsEngine {
         glassAlpha = glassAlpha.finite(0.18f).coerceIn(0f, 1f),
         animationScale = animationScale.finite(1f).coerceIn(0.25f, 2f),
         motionBlurIntensity = motionBlurIntensity.coerceIn(0, 100),
+        tintIntensity = tintIntensity.finite(1f).coerceIn(0f, 1f),
+        backdropBlurRadiusDp = backdropBlurRadiusDp.coerceIn(0, 100),
+        ringSpinSensitivity = ringSpinSensitivity.finite(1f).coerceIn(0f, 2f),
         homeShelfOrder = homeShelfOrder.normalized(),
         homeShelfModes = homeShelfModes.normalized(),
     )

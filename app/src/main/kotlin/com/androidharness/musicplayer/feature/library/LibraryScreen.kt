@@ -415,11 +415,12 @@ private fun ColumnScope.ArtistsContent(
                 key = { it.artist.id },
             ) { item ->
                 ArtistPill(
-                    item = item,
-                    motion = motion,
-                    colorFor = colorFor,
-                    onPlay = { onIntent(LibraryIntent.PlayArtist(item.artist.id)) },
-                )
+    item = item,
+    motion = motion,
+    colorFor = colorFor,
+    onPlay = { onIntent(LibraryIntent.PlayArtist(item.artist.id)) },
+    isSyncing = state.isSyncing,
+)
             }
         }
     }
@@ -933,6 +934,7 @@ private fun ArtistPill(
     motion: SpringSpecs,
     colorFor: suspend (Uri?) -> Color,
     onPlay: () -> Unit,
+    isSyncing: Boolean = false,
 ) {
     var artistColor by remember(item.artist.id) { mutableStateOf(DefaultArtColor) }
 
@@ -983,11 +985,19 @@ private fun ArtistPill(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-            Text(
-                text = "${item.artist.albumCount} albums",
-                color = InkText.copy(alpha = 0.55f),
-                style = MaterialTheme.typography.bodySmall,
-            )
+            if (item.artist.albumCount > 0) {
+                Text(
+                    text = "${item.artist.albumCount} albums",
+                    color = InkText.copy(alpha = 0.55f),
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            } else if (isSyncing) {
+                Text(
+                    text = "Pending",
+                    color = InkText.copy(alpha = 0.55f),
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
         }
 
         PlayAffordance(onPlay = onPlay)

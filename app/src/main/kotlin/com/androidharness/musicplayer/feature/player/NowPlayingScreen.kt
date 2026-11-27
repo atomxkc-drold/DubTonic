@@ -69,6 +69,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.androidharness.musicplayer.core.model.Track
+import com.androidharness.musicplayer.data.settings.CodecDisplayMode
 import com.androidharness.musicplayer.playback.audio.AudioLevelTap
 import com.androidharness.musicplayer.ui.icons.PlayerIcons
 import kotlin.math.abs
@@ -95,6 +96,7 @@ fun NowPlayingScreen(
     val details by viewModel.details.collectAsStateWithLifecycle()
     val colors by viewModel.colors.collectAsStateWithLifecycle()
     val levels by viewModel.levels.collectAsStateWithLifecycle()
+    val uiSettings by viewModel.uiSettings.collectAsStateWithLifecycle()
     val track = details?.takeIf { it.id == playback.trackId }
     val accent = colors.primary
 
@@ -126,7 +128,7 @@ fun NowPlayingScreen(
                     )
                 },
         ) {
-            ArtworkBackdrop(playback.artworkUri)
+            ArtworkBackdrop(playback.artworkUri, uiSettings.backdropBlurRadiusDp)
         }
 
         Column(
@@ -172,7 +174,7 @@ fun NowPlayingScreen(
 
             Spacer(Modifier.height(12.dp))
 
-            QualityLine(track, accent)
+            QualityLine(track, accent, uiSettings.codecDisplayMode)
 
             Spacer(Modifier.height(10.dp))
 
@@ -203,7 +205,7 @@ fun NowPlayingScreen(
                 )
             }
 
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(30.dp))
 
             Row(
                 Modifier.fillMaxWidth(),
@@ -215,6 +217,7 @@ fun NowPlayingScreen(
                     description = "Shuffle",
                     highlighted = playback.shuffleEnabled,
                     accent = accent,
+                    enabled = playback.isConnected,
                     onClick = viewModel::toggleShuffle,
                 )
                 QuickAction(
@@ -244,20 +247,30 @@ fun NowPlayingScreen(
                 )
             }
 
-            Spacer(Modifier.height(16.dp))
+            // Comfortable separation between the action row and the transport row: both are
+            // full touch targets, so they must not read as one dense cluster.
+            Spacer(Modifier.height(34.dp))
 
             Row(
                 Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                IconButton(onClick = onBack, modifier = Modifier.size(48.dp)) {
+                IconButton(
+                    onClick = onBack,
+                    enabled = playback.isConnected,
+                    modifier = Modifier.size(48.dp),
+                ) {
                     Icon(
                         PlayerIcons.Queue, "Open library",
                         tint = Color.White.copy(alpha = 0.85f), modifier = Modifier.size(24.dp),
                     )
                 }
-                IconButton(onClick = viewModel::previous, modifier = Modifier.size(56.dp)) {
+                IconButton(
+                    onClick = viewModel::previous,
+                    enabled = playback.isConnected,
+                    modifier = Modifier.size(56.dp),
+                ) {
                     Icon(
                         PlayerIcons.SkipPrevious, "Previous",
                         tint = Color.White, modifier = Modifier.size(34.dp),
@@ -265,36 +278,62 @@ fun NowPlayingScreen(
                 }
                 Box(
                     Modifier.size(72.dp).clip(CircleShape)
-                        .background(Color.White.copy(alpha = 0.10f))
-                        .border(1.dp, Color.White.copy(alpha = 0.22f), CircleShape)
-                        .clickable(onClick = viewModel::playPause),
+                        .background(
+                            if (playback.isConnected) {
+                                Color.White.copy(alpha = if (playback.isPlaying) 0.18f else 0.10f)
+                            } else {
+                                Color.White.copy(alpha = 0.05f)
+                            }
+                        )
+                        .border(
+                            1.dp,
+                            if (playback.isConnected) {
+                                Color.White.copy(alpha = if (playback.isPlaying) 0.34f else 0.22f)
+                            } else {
+                                Color.White.copy(alpha = 0.10f)
+                            },
+                            CircleShape,
+                        )
+                        .clickable(enabled = playback.isConnected, onClick = viewModel::playPause),
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
                         imageVector = if (playback.isPlaying) PlayerIcons.Pause else Icons.Filled.PlayArrow,
                         contentDescription = if (playback.isPlaying) "Pause" else "Play",
-                        tint = Color.White,
+                        tint = if (playback.isConnected) Color.White else Color.White.copy(alpha = 0.35f),
                         modifier = Modifier.size(40.dp),
                     )
                 }
-                IconButton(onClick = viewModel::next, modifier = Modifier.size(56.dp)) {
+                IconButton(
+                    onClick = viewModel::next,
+                    enabled = playback.isConnected,
+                    modifier = Modifier.size(56.dp),
+                ) {
                     Icon(
                         PlayerIcons.SkipNext, "Next",
                         tint = Color.White, modifier = Modifier.size(34.dp),
                     )
                 }
-                IconButton(onClick = viewModel::toggleFavorite, modifier = Modifier.size(48.dp)) {
+                IconButton(
+                    onClick = viewModel::toggleFavorite,
+                    enabled = track != null,
+                    modifier = Modifier.size(48.dp),
+                ) {
                     val favorite = track?.isFavorite == true
                     Icon(
                         imageVector = if (favorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
                         contentDescription = if (favorite) "Remove from favorites" else "Add to favorites",
-                        tint = if (favorite) accent else Color.White.copy(alpha = 0.85f),
+                        tint = when {
+                            track == null -> Color.White.copy(alpha = 0.30f)
+                            favorite -> accent
+                            else -> Color.White.copy(alpha = 0.85f)
+                        },
                         modifier = Modifier.size(24.dp),
                     )
                 }
             }
 
-            Spacer(Modifier.height(18.dp))
+            Spacer(Modifier.height(26.dp))
 
             BeatVisualizer(
                 levels = levels,
@@ -311,7 +350,7 @@ fun NowPlayingScreen(
  * fading to black — the reflection bleeds the art into the controls instead of a hard edge.
  */
 @Composable
-private fun BoxScope.ArtworkBackdrop(uri: Uri?) {
+private fun BoxScope.ArtworkBackdrop(uri: Uri?, blurRadiusDp: Int = 38) {
     if (uri == null) {
         Box(Modifier.fillMaxSize().background(Color.Black))
         return
@@ -328,7 +367,7 @@ private fun BoxScope.ArtworkBackdrop(uri: Uri?) {
                 scaleX = 1.08f
                 alpha = 0.90f
             }
-            .blur(38.dp),
+            .blur(blurRadiusDp.dp),
     )
 
     Box(
@@ -368,10 +407,10 @@ private fun BoxScope.ArtworkBackdrop(uri: Uri?) {
 }
 
 @Composable
-private fun QualityLine(track: Track?, accent: Color) {
+private fun QualityLine(track: Track?, accent: Color, mode: CodecDisplayMode) {
     val quality = track?.audioQuality() ?: AudioQuality.UNKNOWN
     val parts = buildList {
-        if (quality != AudioQuality.UNKNOWN) {
+        if (quality != AudioQuality.UNKNOWN && mode != CodecDisplayMode.SIMPLIFIED) {
             add(
                 when (quality) {
                     AudioQuality.HI_RES -> "HI-RES"
@@ -381,14 +420,28 @@ private fun QualityLine(track: Track?, accent: Color) {
                 }
             )
         }
-        track?.format?.uppercase()?.takeIf { it.isNotBlank() }?.let(::add)
+        if (mode == CodecDisplayMode.RAW_CONTAINER) {
+            track?.format?.uppercase()?.takeIf { it.isNotBlank() }?.let(::add)
+        }
         track?.sampleRateHz?.takeIf { it > 0 }?.let { add(sampleRateLabel(it)) }
         track?.bitrateKbps?.takeIf { it > 0 }?.let { add("$it kbps") }
     }
-    if (parts.isEmpty()) return
+    if (parts.isEmpty() && quality == AudioQuality.UNKNOWN) return
 
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Start) {
-        if (quality == AudioQuality.UNKNOWN) {
+        if (quality != AudioQuality.UNKNOWN) {
+            QualityBadge(quality, mode)
+            if (parts.isNotEmpty()) {
+                Spacer(Modifier.width(6.dp))
+                Text(
+                    text = parts.joinToString(" · "),
+                    color = Color.White.copy(alpha = 0.6f),
+                    fontSize = 11.sp,
+                    fontFamily = FontFamily.Monospace,
+                    textAlign = TextAlign.Start,
+                )
+            }
+        } else if (parts.isNotEmpty()) {
             Text(
                 text = parts.joinToString(" · "),
                 color = accent,
@@ -396,18 +449,6 @@ private fun QualityLine(track: Track?, accent: Color) {
                 fontFamily = FontFamily.Monospace,
                 textAlign = TextAlign.Start,
             )
-        } else {
-            QualityBadge(quality)
-            if (parts.size > 1) {
-                Spacer(Modifier.width(6.dp))
-                Text(
-                    text = parts.drop(1).joinToString(" · "),
-                    color = Color.White.copy(alpha = 0.6f),
-                    fontSize = 11.sp,
-                    fontFamily = FontFamily.Monospace,
-                    textAlign = TextAlign.Start,
-                )
-            }
         }
     }
 }
@@ -418,25 +459,41 @@ private fun QuickAction(
     description: String,
     highlighted: Boolean = false,
     accent: Color = Color.White,
+    enabled: Boolean = true,
     onClick: () -> Unit,
 ) {
+    val alpha = if (enabled) 1f else 0.32f
     Box(
-        Modifier.size(46.dp).clip(CircleShape)
+        Modifier
+            .size(46.dp)
+            .clip(CircleShape)
             .background(
-                if (highlighted) accent.copy(alpha = 0.24f) else Color.White.copy(alpha = 0.07f)
+                when {
+                    !enabled -> Color.White.copy(alpha = 0.04f)
+                    highlighted -> accent.copy(alpha = 0.24f)
+                    else -> Color.White.copy(alpha = 0.07f)
+                }
             )
             .border(
                 1.dp,
-                if (highlighted) accent.copy(alpha = 0.65f) else Color.White.copy(alpha = 0.16f),
+                when {
+                    !enabled -> Color.White.copy(alpha = 0.08f)
+                    highlighted -> accent.copy(alpha = 0.65f)
+                    else -> Color.White.copy(alpha = 0.16f)
+                },
                 CircleShape,
             )
-            .clickable(onClick = onClick),
+            .clickable(enabled = enabled, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         Icon(
             icon,
             contentDescription = description,
-            tint = if (highlighted) accent else Color.White.copy(alpha = 0.82f),
+            tint = when {
+                !enabled -> Color.White.copy(alpha = 0.32f)
+                highlighted -> accent
+                else -> Color.White.copy(alpha = 0.82f)
+            }.copy(alpha = alpha),
             modifier = Modifier.size(20.dp),
         )
     }

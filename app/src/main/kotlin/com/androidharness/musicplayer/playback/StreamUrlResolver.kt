@@ -5,6 +5,7 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DataSpec
 import androidx.media3.datasource.ResolvingDataSource
 import com.androidharness.musicplayer.data.connectivity.ConnectivityMonitor
+import com.androidharness.musicplayer.data.remote.PrivacyGateInterceptor
 import com.androidharness.musicplayer.data.remote.StreamUri
 import com.androidharness.musicplayer.data.remote.SubsonicNotConfiguredException
 import com.androidharness.musicplayer.data.remote.SubsonicUrls
@@ -35,6 +36,9 @@ class StreamUrlResolver @Inject constructor(
 
     override fun resolveDataSpec(dataSpec: DataSpec): DataSpec {
         val trackId = StreamUri.trackIdOf(dataSpec.uri.toString()) ?: return dataSpec
+        if (privacyBlocksNetwork()) {
+            throw IOException(PrivacyGateInterceptor.PRIVACY_MESSAGE)
+        }
         val profile = profile()
         val streamUrl = try {
             urls.streamUrl(trackId, profile)
@@ -52,6 +56,12 @@ class StreamUrlResolver @Inject constructor(
         if (fallback.preferOriginal) return TranscodeProfile()
         return settings.settings.value.network.transcodeFor(connectivity.current())
     }
+
+    /**
+     * A queued stream still resolves when privacy mode is on, but only to a track that is
+     * already downloaded: the request never leaves the phone.
+     */
+    fun privacyBlocksNetwork(): Boolean = settings.settings.value.ui.privacyKillSwitch
 
     private fun cacheKey(trackId: String, profile: TranscodeProfile): String {
         val codec = if (profile.enabled) profile.codec.name else "ORIGINAL"

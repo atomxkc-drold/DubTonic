@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -70,6 +71,8 @@ import com.androidharness.musicplayer.ui.icons.PlayerIcons
 import com.androidharness.musicplayer.core.model.Track
 import com.androidharness.musicplayer.data.settings.HomeShelf
 import com.androidharness.musicplayer.data.settings.HomeShelfOrder
+import com.androidharness.musicplayer.data.settings.TimeMachineLens
+import com.androidharness.musicplayer.data.settings.UndatedTrackMode
 import com.androidharness.musicplayer.ui.theme.SpringSpecs
 
 @OptIn(ExperimentalSharedTransitionApi::class)
@@ -110,11 +113,24 @@ fun HomeScreen(
     val scroll = rememberScrollState()
 
     val artwork = remember(tracks) { selectHomeArtwork(tracks).firstOrNull() }
-    val buckets = remember(tracks) { eraBuckets(tracks, includeUndated = true) }
-    // Covers for the dial: up to a few albums per decade, including the undated pile.
-    val eraArt = remember(tracks, buckets) {
+    val playCounts by viewModel.playCounts.collectAsStateWithLifecycle()
+    val buckets = remember(tracks, ui.timeMachineLens, ui.undatedTrackMode, playCounts, ui.globalStreamsOptIn) {
+        eraBuckets(
+            tracks = tracks,
+            lens = ui.timeMachineLens,
+            undatedMode = ui.undatedTrackMode,
+            localPlays = playCounts,
+        )
+    }
+    // Covers for the dial: up to a few albums per slice, including the undated pile.
+    val eraArt = remember(tracks, buckets, ui.timeMachineLens, playCounts) {
         buckets.associate { bucket ->
-            bucket.startYear to tracksInEra(tracks, bucket).mapNotNull { track ->
+            bucket.id to tracksInEra(
+                tracks = tracks,
+                bucket = bucket,
+                lens = ui.timeMachineLens,
+                localPlays = playCounts,
+            ).mapNotNull { track ->
                 val id = track.coverArtId?.takeIf { it.isNotBlank() } ?: return@mapNotNull null
                 val art = viewModel.artUri(id) ?: return@mapNotNull null
                 EraArtSource(
@@ -127,8 +143,9 @@ fun HomeScreen(
     }
     val stacks = remember(tracks) { buildVibeStacks(tracks, limit = 6, minSize = 3) }
     val route = remember(tracks) { buildSonicFlow(tracks, maxTracks = 14) }
-    var eraStart by rememberSaveable(tracks) { mutableStateOf<Int?>(null) }
-    val selectedEra = buckets.firstOrNull { it.startYear == eraStart } ?: buckets.maxByOrNull { it.count }
+    var eraStart by rememberSaveable(tracks) { mutableStateOf<String?>(null) }
+    val selectedEra = buckets.firstOrNull { it.id == eraStart } ?: buckets.maxByOrNull { it.count }
+    val undatedCount = remember(tracks) { undatedTracks(tracks).size }
 
     // Home shelves: user order first, anything unknown appended by SettingsEngine.
     val shelfOrder = remember(ui.homeShelfOrder) {
@@ -411,13 +428,32 @@ fun HomeScreen(
                     CollapsibleSection(
                         index = "01",
                         title = "TIME MACHINE",
-                        hint = "${buckets.size} ERAS",
+                        hint = "${buckets.size} ${if (ui.timeMachineLens == TimeMachineLens.SONG_YEAR) "ERAS" else "GROUPS"}",
                         expanded = timeMachineOpen,
                         onToggle = { timeMachineOpen = !timeMachineOpen },
                         accent = accent,
                         ink = ink,
                         muted = muted,
                     ) {
+                        TimeMachineLensPicker(
+                            selected = ui.timeMachineLens,
+                            globalStreamsOptIn = ui.globalStreamsOptIn,
+                            onSelect = viewModel::setTimeMachineLens,
+                            onToggleGlobalStreams = viewModel::setGlobalStreamsOptIn,
+                            accent = accent,
+                            ink = ink,
+                            muted = muted,
+                        )
+                        Spacer(Modifier.height(10.dp))
+                        UndatedFilterRow(
+                            mode = ui.undatedTrackMode,
+                            count = undatedCount,
+                            onSelect = viewModel::setUndatedTrackMode,
+                            accent = accent,
+                            ink = ink,
+                            muted = muted,
+                        )
+                        Spacer(Modifier.height(12.dp))
                         EraDial(
                             buckets = buckets,
                             selected = selectedEra,
@@ -427,7 +463,8 @@ fun HomeScreen(
                             animate = animate,
                             motion = ui.timeMachineMotion,
                             eraArt = eraArt,
-                            onSelect = { eraStart = it.startYear },
+                            spinSensitivity = ui.ringSpinSensitivity,
+                            onSelect = { eraStart = it.id },
                             onPlay = viewModel::playEra,
                         )
                     }
@@ -458,6 +495,169 @@ fun HomeScreen(
                 Spacer(Modifier.height(24.dp))
             }
         }
+    }
+}
+
+/** Ring lens selector: what the dial groups by. Global Streams stays opt-in and cache-only. */
+@Composable
+private fun TimeMachineLensPicker(
+    selected: TimeMachineLens,
+    globalStreamsOptIn: Boolean,
+    onSelect: (TimeMachineLens) -> Unit,
+    onToggleGlobalStreams: (Boolean) -> Unit,
+    accent: Color,
+    ink: Color,
+    muted: Color,
+) {
+    Column(Modifier.fillMaxWidth()) {
+        KickerText("LENS", muted)
+        Spacer(Modifier.height(7.dp))
+        LazyRowForLenses(
+            selected = selected,
+            onSelect = onSelect,
+            accent = accent,
+            ink = ink,
+        )
+        Spacer(Modifier.height(8.dp))
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(14.dp))
+                .background(ink.copy(alpha = 0.06f))
+                .clickable { onToggleGlobalStreams(!globalStreamsOptIn) }
+                .padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text(
+                    text = "Global Streams (opt-in)",
+                    color = ink,
+                    style = MaterialTheme.typography.labelLarge,
+                )
+                Text(
+                    text = if (globalStreamsOptIn) {
+                        "Cached server play counts only. No lookup runs."
+                    } else {
+                        "Off. Nothing is fetched and the dial stays local."
+                    },
+                    color = muted,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+            Text(
+                text = if (globalStreamsOptIn) "ON" else "OFF",
+                color = if (globalStreamsOptIn) accent else muted,
+                style = MaterialTheme.typography.labelSmall,
+                fontFamily = FontFamily.Monospace,
+                fontWeight = FontWeight.Bold,
+            )
+        }
+    }
+}
+
+@Composable
+private fun LazyRowForLenses(
+    selected: TimeMachineLens,
+    onSelect: (TimeMachineLens) -> Unit,
+    accent: Color,
+    ink: Color,
+) {
+    androidx.compose.foundation.lazy.LazyRow(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        items(TimeMachineLens.entries.toList()) { lens ->
+            val active = lens == selected
+            Box(
+                modifier = Modifier
+                    .height(40.dp)
+                    .clip(RoundedCornerShape(13.dp))
+                    .background(if (active) accent else ink.copy(alpha = 0.08f))
+                    .border(
+                        1.dp,
+                        if (active) Color.Transparent else ink.copy(alpha = 0.14f),
+                        RoundedCornerShape(13.dp),
+                    )
+                    .clickable { onSelect(lens) }
+                    .padding(horizontal = 13.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = lens.label,
+                    color = if (active) Color(0xFF0B0F0E) else ink,
+                    style = MaterialTheme.typography.labelLarge,
+                    fontFamily = FontFamily.Monospace,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
+        }
+    }
+}
+
+/** Undated ("??") tracks: hide them, fold them into one slice, or inspect only them. */
+@Composable
+private fun UndatedFilterRow(
+    mode: UndatedTrackMode,
+    count: Int,
+    onSelect: (UndatedTrackMode) -> Unit,
+    accent: Color,
+    ink: Color,
+    muted: Color,
+) {
+    Column(Modifier.fillMaxWidth()) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            KickerText("UNDATED", muted)
+            Spacer(Modifier.width(8.dp))
+            Text(
+                text = "$count TRACKS",
+                color = muted.copy(alpha = 0.8f),
+                style = MaterialTheme.typography.labelSmall,
+                fontFamily = FontFamily.Monospace,
+            )
+        }
+        Spacer(Modifier.height(7.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            UndatedChip("Hide", mode == UndatedTrackMode.HIDDEN, accent, ink) {
+                onSelect(UndatedTrackMode.HIDDEN)
+            }
+            UndatedChip("Include", mode == UndatedTrackMode.INCLUDED, accent, ink) {
+                onSelect(UndatedTrackMode.INCLUDED)
+            }
+            UndatedChip("Only ??", mode == UndatedTrackMode.ONLY, accent, ink) {
+                onSelect(UndatedTrackMode.ONLY)
+            }
+        }
+    }
+}
+
+@Composable
+private fun UndatedChip(
+    label: String,
+    selected: Boolean,
+    accent: Color,
+    ink: Color,
+    onClick: () -> Unit,
+) {
+    Box(
+        modifier = Modifier
+            .height(40.dp)
+            .clip(RoundedCornerShape(13.dp))
+            .background(if (selected) accent else ink.copy(alpha = 0.08f))
+            .border(
+                1.dp,
+                if (selected) Color.Transparent else ink.copy(alpha = 0.14f),
+                RoundedCornerShape(13.dp),
+            )
+            .clickable(onClick = onClick)
+            .padding(horizontal = 13.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = label,
+            color = if (selected) Color(0xFF0B0F0E) else ink,
+            style = MaterialTheme.typography.labelLarge,
+            fontFamily = FontFamily.Monospace,
+            fontWeight = FontWeight.SemiBold,
+        )
     }
 }
 

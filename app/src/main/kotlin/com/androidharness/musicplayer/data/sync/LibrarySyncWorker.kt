@@ -7,6 +7,7 @@ import androidx.work.WorkerParameters
 import com.androidharness.musicplayer.core.result.AppError
 import com.androidharness.musicplayer.core.result.AppResult
 import com.androidharness.musicplayer.data.cache.AudioCacheEvictor
+import com.androidharness.musicplayer.data.cache.SmartOfflineBuffer
 import com.androidharness.musicplayer.domain.repository.MusicRepository
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
@@ -17,6 +18,7 @@ class LibrarySyncWorker @AssistedInject constructor(
     @Assisted params: WorkerParameters,
     private val repository: MusicRepository,
     private val evictor: AudioCacheEvictor,
+    private val smartOfflineBuffer: SmartOfflineBuffer,
 ) : CoroutineWorker(context, params) {
 
     override suspend fun doWork(): Result {
@@ -25,6 +27,8 @@ class LibrarySyncWorker @AssistedInject constructor(
             evictor.reconcile()
             evictor.evictNow()
         }
+
+        runCatching { smartOfflineBuffer.pinIfEnabled() }
 
         return when (val result = repository.syncLibrary()) {
             is AppResult.Success -> Result.success()

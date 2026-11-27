@@ -75,20 +75,23 @@ internal fun EraDial(
     muted: Color,
     animate: Boolean,
     motion: TimeMachineMotion,
-    eraArt: Map<Int, List<EraArtSource>>,
+    eraArt: Map<String, List<EraArtSource>>,
     onSelect: (EraBucket) -> Unit,
     onPlay: (EraBucket) -> Unit,
+    spinSensitivity: Float = 1f,
     modifier: Modifier = Modifier,
 ) {
     if (buckets.isEmpty()) return
 
     // One clock for the ring halo and the orbiting covers, so they cannot drift apart.
+    // Spin sensitivity scales the turn speed; reduced motion stops the ring entirely.
+    val spinDuration = (90_000f / spinSensitivity.coerceIn(0.1f, 3f)).toLong().coerceAtLeast(6_000L)
     val spin: State<Float> = if (animate && motion != TimeMachineMotion.OFF) {
         rememberInfiniteTransition(label = "dial").animateFloat(
             initialValue = 0f,
             targetValue = 360f,
             animationSpec = infiniteRepeatable(
-                animation = tween(durationMillis = 90_000, easing = LinearEasing),
+                animation = tween(durationMillis = spinDuration.toInt(), easing = LinearEasing),
             ),
             label = "dialSpin",
         )
@@ -163,7 +166,7 @@ internal fun EraDial(
                 tiles = tiles,
                 spin = spin,
                 featured = featured,
-                selectedStartYear = selected?.startYear,
+                selectedStartYear = selected?.id,
                 accent = accent,
                 ink = ink,
                 onTileTap = { manual = it },
@@ -201,10 +204,10 @@ internal fun EraDial(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             contentPadding = PaddingValues(horizontal = 2.dp),
         ) {
-            items(buckets, key = { it.startYear }) { bucket ->
+            items(buckets, key = { it.id }) { bucket ->
                 EraChip(
                     bucket = bucket,
-                    selected = bucket.startYear == selected?.startYear,
+                    selected = bucket.id == selected?.id,
                     accent = accent,
                     ink = ink,
                     muted = muted,
@@ -251,7 +254,7 @@ internal fun EraDial(
                     fontWeight = FontWeight.SemiBold,
                 )
                 Text(
-                    text = "Shuffled inside the decade",
+                    text = "Shuffled inside the slice",
                     color = muted,
                     style = MaterialTheme.typography.bodySmall,
                 )
@@ -301,7 +304,7 @@ private fun EraRing(
         )
 
         buckets.forEach { bucket ->
-            val isSelected = bucket.startYear == selected?.startYear
+            val isSelected = bucket.id == selected?.id
             val gap = if (bucket.sweepDegrees > 6f) 2.4f else 0.8f
             val sweep = (bucket.sweepDegrees - gap).coerceAtLeast(0.6f)
             val width = if (isSelected) 24.dp.toPx() else 13.dp.toPx()

@@ -62,6 +62,7 @@ internal data class EraArtSource(
 )
 
 internal data class EraArtTile(
+    val id: String,
     val startYear: Int,
     val art: Uri?,
     val album: String,
@@ -83,12 +84,12 @@ private const val SMALL_ERA = 5
  */
 internal fun eraArtTiles(
     buckets: List<EraBucket>,
-    pool: Map<Int, List<EraArtSource>>,
+    pool: Map<String, List<EraArtSource>>,
     random: Random,
     perEra: Int = MAX_PER_ERA,
 ): List<EraArtTile> = buildList {
     buckets.forEach { bucket ->
-        val candidates = pool[bucket.startYear].orEmpty()
+        val candidates = pool[bucket.id].orEmpty()
         if (candidates.isEmpty()) return@forEach
         val picked = if (candidates.size < SMALL_ERA) {
             candidates.take(perEra)
@@ -104,6 +105,7 @@ internal fun eraArtTiles(
             }
             add(
                 EraArtTile(
+                    id = bucket.id,
                     startYear = bucket.startYear,
                     art = source.art,
                     album = source.album,
@@ -170,7 +172,7 @@ internal fun EraArtLayer(
     tiles: List<EraArtTile>,
     spin: State<Float>,
     featured: EraArtTile?,
-    selectedStartYear: Int?,
+    selectedStartYear: String?,
     accent: Color,
     ink: Color,
     onTileTap: (EraArtTile) -> Unit,
@@ -201,7 +203,7 @@ private fun EraArtOrbit(
     tiles: List<EraArtTile>,
     spin: State<Float>,
     featured: EraArtTile?,
-    selectedStartYear: Int?,
+    selectedStartYear: String?,
     accent: Color,
     ink: Color,
     onTileTap: (EraArtTile) -> Unit,
@@ -217,7 +219,7 @@ private fun EraArtOrbit(
         contentAlignment = Alignment.Center,
     ) {
         tiles.forEach { tile ->
-            val selected = tile.startYear == selectedStartYear
+            val selected = tile.id == selectedStartYear
             val spotlighted = tile === featured
             val radians = (tile.angleDegrees - 90f) * PI / 180.0
             val x = (cos(radians) * radiusPx).toFloat()

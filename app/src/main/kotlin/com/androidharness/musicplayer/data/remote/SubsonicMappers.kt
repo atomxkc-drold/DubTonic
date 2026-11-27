@@ -29,6 +29,7 @@ fun SongDto.toTrack(syncedAtMs: Long = System.currentTimeMillis()): Track = Trac
     format = suffix,
     sizeBytes = size,
     coverArtId = coverArt,
+    serverPlayCount = playCount?.coerceAtMost(Int.MAX_VALUE.toLong())?.toInt() ?: 0,
     replayGainTrackDb = replayGain?.trackGain,
     replayGainAlbumDb = replayGain?.albumGain,
     addedAtMs = parseTimestamp(created),

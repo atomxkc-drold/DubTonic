@@ -20,6 +20,7 @@ data class Track(
     val coverArtId: String?,
     val isFavorite: Boolean = false,
     val rating: Int = 0,
+    val serverPlayCount: Int = 0,
     val isDownloaded: Boolean = false,
     val localUri: String? = null,
     val replayGainTrackDb: Float? = null,

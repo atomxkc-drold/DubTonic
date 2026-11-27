@@ -19,6 +19,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.androidharness.musicplayer.core.model.Track
+import com.androidharness.musicplayer.data.settings.CodecDisplayMode
 import com.androidharness.musicplayer.ui.icons.PlayerIcons
 
 enum class AudioQuality { LOSSLESS, LOSSY, HI_RES, UNKNOWN }
@@ -42,7 +43,11 @@ private data class QualityStyle(
 )
 
 @Composable
-fun QualityBadge(quality: AudioQuality, modifier: Modifier = Modifier) {
+fun QualityBadge(
+    quality: AudioQuality,
+    mode: CodecDisplayMode = CodecDisplayMode.RAW_CONTAINER,
+    modifier: Modifier = Modifier,
+) {
     if (quality == AudioQuality.UNKNOWN) return
 
     val style = when (quality) {
@@ -55,23 +60,34 @@ fun QualityBadge(quality: AudioQuality, modifier: Modifier = Modifier) {
         AudioQuality.UNKNOWN -> return
     }
 
+    // SIMPLIFIED collapses to two tiers; HIGHLIGHTED keeps the tier but warns on upsampled
+    // or transcoded streams by swapping to the accent pill.
+    val label = if (mode == CodecDisplayMode.SIMPLIFIED && quality == AudioQuality.HI_RES) {
+        "LOSSLESS"
+    } else {
+        style.label
+    }
+    val highlighted = mode == CodecDisplayMode.HIGHLIGHTED && quality == AudioQuality.HI_RES
+    val pillColor = if (highlighted) Color(0xFFFFC107) else style.pillColor
+    val textColor = if (highlighted) Color(0xFF000000) else style.textColor
+
     Row(
         modifier = modifier
             .clip(RoundedCornerShape(999.dp))
-            .background(style.pillColor)
+            .background(pillColor)
             .padding(horizontal = 8.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
             imageVector = style.icon,
             contentDescription = null,
-            tint = style.textColor,
+            tint = textColor,
             modifier = Modifier.size(12.dp),
         )
         Spacer(Modifier.width(4.dp))
         Text(
-            text = style.label,
-            color = style.textColor,
+            text = label,
+            color = textColor,
             fontSize = 10.sp,
             fontWeight = FontWeight.Bold,
             letterSpacing = 1.sp,

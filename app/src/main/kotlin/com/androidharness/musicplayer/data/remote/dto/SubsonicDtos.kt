@@ -128,6 +128,7 @@ data class SongDto(
     val discNumber: Int? = null,
     val year: Int? = null,
     val genre: String? = null,
+    val playCount: Long? = null,
     val created: String? = null,
     val isDir: Boolean? = null,
     val replayGain: ReplayGainDto? = null,

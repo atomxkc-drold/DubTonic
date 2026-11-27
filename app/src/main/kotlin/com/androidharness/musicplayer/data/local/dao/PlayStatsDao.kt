@@ -12,6 +12,9 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface PlayStatsDao {
 
+    @Query("SELECT * FROM play_stats")
+    fun observeAll(): Flow<List<PlayStatsEntity>>
+
     @Query(
         """
         SELECT t.* FROM tracks t

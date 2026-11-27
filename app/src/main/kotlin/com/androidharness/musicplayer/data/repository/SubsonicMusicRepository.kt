@@ -76,6 +76,9 @@ class SubsonicMusicRepository @Inject constructor(
     override fun observePlaylistTracks(playlistId: String): Flow<List<Track>> =
         playlistDao.observeTracks(playlistId).map { entities -> entities.map { it.toModel() } }
 
+    override fun observePlayCounts(): Flow<Map<String, Int>> =
+        playStatsDao.observeAll().map { rows -> rows.associate { it.trackId to it.playCount } }
+
     override fun observeTopPlayed(limit: Int): Flow<List<Track>> =
         playStatsDao.observeTopPlayed(limit).map { entities -> entities.map { it.toModel() } }
 
@@ -126,6 +129,9 @@ class SubsonicMusicRepository @Inject constructor(
     }
 
     override suspend fun syncLibrary(): AppResult<SyncSummary> {
+        if (settings.settings.value.ui.privacyKillSwitch) {
+            return AppResult.Failure(AppError.Network("Privacy mode blocks library metadata sync"))
+        }
         val now = System.currentTimeMillis()
         return subsonicCall {
             credentials.require()
@@ -202,6 +208,11 @@ class SubsonicMusicRepository @Inject constructor(
 
     override suspend fun downloadTrack(trackId: String): AppResult<String> =
         withContext(Dispatchers.IO) {
+            if (settings.settings.value.ui.privacyKillSwitch) {
+                return@withContext AppResult.Failure(
+                    AppError.Network("Privacy mode blocks external audio downloads")
+                )
+            }
             val track = trackDao.byId(trackId)?.toModel()
                 ?: return@withContext AppResult.Failure(
                     AppError.Subsonic(70, "Track not found")
@@ -253,6 +264,7 @@ class SubsonicMusicRepository @Inject constructor(
         }
 
     override suspend fun scrobble(trackId: String) {
+        if (settings.settings.value.ui.privacyKillSwitch) return
         runCatching {
             subsonicCall {
                 api.scrobble(urls.rest("scrobble"), trackId, submission = true).validated()

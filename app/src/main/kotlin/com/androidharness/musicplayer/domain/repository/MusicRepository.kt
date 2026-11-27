@@ -24,6 +24,9 @@ interface MusicRepository {
 
     fun observePlaylistTracks(playlistId: String): Flow<List<Track>>
 
+    /** Local play counts keyed by track id. */
+    fun observePlayCounts(): Flow<Map<String, Int>>
+
     /** Tracks ordered by how often they were started, most played first. */
     fun observeTopPlayed(limit: Int): Flow<List<Track>>
 

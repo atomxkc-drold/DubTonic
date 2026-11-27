@@ -209,6 +209,9 @@ class LibraryViewModel @Inject constructor(
             }
         }
         val q = control.query.trim()
+        val albumsByArtistId = library.albums.filterNot { it.artistId.isNullOrBlank() }
+            .groupBy { it.artistId!! }
+        val albumsByArtistName = library.albums.groupBy { it.artist.trim().lowercase() }
         return LibraryUiState(
             tracks = sortTracks(filtered, control.sort).map { track ->
                 TrackUi(track = track, artworkUri = artworkFor(track.coverArtId))
@@ -220,7 +223,12 @@ class LibraryViewModel @Inject constructor(
             artists = library.artists
                 .filter { q.isBlank() || it.name.contains(q, ignoreCase = true) }
                 .sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { artist: Artist -> artist.name })
-                .map { artist -> ArtistUi(artist = artist, artworkUri = artworkFor(artist.coverArtId)) },
+                .map { artist ->
+                    val syncedCount = albumsByArtistId[artist.id]?.size
+                        ?: albumsByArtistName[artist.name.trim().lowercase()]?.size
+                    val resolved = artist.copy(albumCount = syncedCount ?: artist.albumCount)
+                    ArtistUi(artist = resolved, artworkUri = artworkFor(artist.coverArtId))
+                },
             playlists = library.playlists
                 .filter { q.isBlank() || it.name.contains(q, ignoreCase = true) }
                 .sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { playlist: Playlist -> playlist.name })

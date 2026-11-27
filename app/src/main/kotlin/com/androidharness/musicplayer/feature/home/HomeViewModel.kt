@@ -12,7 +12,9 @@ import com.androidharness.musicplayer.data.remote.SubsonicCredentialsStore
 import com.androidharness.musicplayer.data.remote.SubsonicSession
 import com.androidharness.musicplayer.data.remote.SubsonicUrls
 import com.androidharness.musicplayer.data.settings.HomeShelfMode
+import com.androidharness.musicplayer.data.settings.TimeMachineLens
 import com.androidharness.musicplayer.data.settings.UiSettings
+import com.androidharness.musicplayer.data.settings.UndatedTrackMode
 import com.androidharness.musicplayer.domain.repository.MusicRepository
 import com.androidharness.musicplayer.domain.repository.SettingsRepository
 import com.androidharness.musicplayer.feature.player.PlaybackConnection
@@ -76,6 +78,10 @@ class HomeViewModel @Inject constructor(
 
     val playlists: StateFlow<List<Playlist>> = repository.observePlaylists()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    /** Local play counts, the source for the User Plays ring lens. */
+    val playCounts: StateFlow<Map<String, Int>> = repository.observePlayCounts()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
 
     val playback: StateFlow<PlaybackUiState> = connection.state
 
@@ -155,7 +161,16 @@ class HomeViewModel @Inject constructor(
     }
 
     fun playEra(bucket: EraBucket) {
-        play(tracksInEra(tracks.value, bucket), shuffle = true)
+        val ui = settingsRepository.settings.value.ui
+        play(
+            tracksInEra(
+                tracks = tracks.value,
+                bucket = bucket,
+                lens = ui.timeMachineLens,
+                localPlays = playCounts.value,
+            ),
+            shuffle = true,
+        )
     }
 
     fun playStack(stack: VibeStack) {
@@ -199,6 +214,25 @@ class HomeViewModel @Inject constructor(
             settingsRepository.update {
                 it.copy(ui = it.ui.copy(homeShelfModes = it.ui.homeShelfModes + (shelf to mode.name)))
             }
+        }
+    }
+
+    fun setTimeMachineLens(lens: TimeMachineLens) {
+        viewModelScope.launch {
+            settingsRepository.update { it.copy(ui = it.ui.copy(timeMachineLens = lens)) }
+        }
+    }
+
+    fun setUndatedTrackMode(mode: UndatedTrackMode) {
+        viewModelScope.launch {
+            settingsRepository.update { it.copy(ui = it.ui.copy(undatedTrackMode = mode)) }
+        }
+    }
+
+    /** Opt-in only; the lens reads the local cache and never triggers a lookup. */
+    fun setGlobalStreamsOptIn(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.update { it.copy(ui = it.ui.copy(globalStreamsOptIn = enabled)) }
         }
     }
 

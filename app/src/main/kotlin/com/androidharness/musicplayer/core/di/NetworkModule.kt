@@ -1,6 +1,7 @@
 package com.androidharness.musicplayer.core.di
 
 import android.content.Context
+import com.androidharness.musicplayer.data.remote.PrivacyGateInterceptor
 import com.androidharness.musicplayer.data.remote.SubsonicApi
 import com.androidharness.musicplayer.data.remote.SubsonicAuthInterceptor
 import com.androidharness.musicplayer.data.remote.SubsonicCredentialsStore
@@ -43,8 +44,10 @@ object NetworkModule {
     @Singleton
     fun provideOkHttpClient(
         authInterceptor: SubsonicAuthInterceptor,
+        privacyGate: PrivacyGateInterceptor,
         cache: Cache,
     ): OkHttpClient = OkHttpClient.Builder()
+        .addInterceptor(privacyGate)
         .addInterceptor(authInterceptor)
         .cache(cache)
         .connectTimeout(15, TimeUnit.SECONDS)
@@ -76,8 +79,10 @@ object NetworkModule {
     @Named(IMAGE_CLIENT)
     fun provideImageOkHttpClient(
         authInterceptor: SubsonicAuthInterceptor,
+        privacyGate: PrivacyGateInterceptor,
         cache: Cache,
     ): OkHttpClient = OkHttpClient.Builder()
+        .addInterceptor(privacyGate)
         .addInterceptor { chain ->
             chain.proceed(
                 chain.request().newBuilder()

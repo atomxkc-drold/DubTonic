@@ -29,6 +29,7 @@ fun TrackEntity.toModel(): Track = Track(
     coverArtId = coverArtId,
     isFavorite = isFavorite,
     rating = rating,
+    serverPlayCount = serverPlayCount,
     isDownloaded = isDownloaded,
     localUri = localUri,
     replayGainTrackDb = replayGainTrackDb,
@@ -58,6 +59,7 @@ fun Track.toEntity(rowId: Long = stableRowId(id)): TrackEntity = TrackEntity(
     coverArtId = coverArtId,
     isFavorite = isFavorite,
     rating = rating,
+    serverPlayCount = serverPlayCount,
     isDownloaded = isDownloaded,
     localUri = localUri,
     replayGainTrackDb = replayGainTrackDb,
@@ -70,6 +72,7 @@ internal fun preserveLocalTrackState(incoming: TrackEntity, current: TrackEntity
     if (current == null) incoming else incoming.copy(
         isFavorite = current.isFavorite,
         rating = current.rating,
+        serverPlayCount = maxOf(incoming.serverPlayCount, current.serverPlayCount),
         isDownloaded = current.isDownloaded,
         localUri = current.localUri,
         replayGainTrackDb = current.replayGainTrackDb,

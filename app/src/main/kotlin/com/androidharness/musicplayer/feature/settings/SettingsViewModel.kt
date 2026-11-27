@@ -9,9 +9,12 @@ import com.androidharness.musicplayer.data.remote.SubsonicUrls
 import com.androidharness.musicplayer.data.remote.validated
 import com.androidharness.musicplayer.data.settings.AppSettings
 import com.androidharness.musicplayer.data.settings.AudioCodec
+import com.androidharness.musicplayer.data.settings.CodecDisplayMode
 import com.androidharness.musicplayer.data.settings.HomeShelfMode
+import com.androidharness.musicplayer.data.settings.TimeMachineLens
 import com.androidharness.musicplayer.data.settings.TimeMachineMotion
 import com.androidharness.musicplayer.data.settings.TranscodeProfile
+import com.androidharness.musicplayer.data.settings.UndatedTrackMode
 import com.androidharness.musicplayer.data.sync.SyncScheduler
 import com.androidharness.musicplayer.domain.repository.SettingsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -184,6 +187,10 @@ class SettingsViewModel @Inject constructor(
         it.copy(ui = it.ui.copy(reducedMotion = enabled))
     }
 
+    fun setPrivacyKillSwitch(enabled: Boolean) = update {
+        it.copy(ui = it.ui.copy(privacyKillSwitch = enabled))
+    }
+
     fun setTimeMachineMotion(mode: TimeMachineMotion) = update {
         it.copy(ui = it.ui.copy(timeMachineMotion = mode))
     }
@@ -234,6 +241,39 @@ class SettingsViewModel @Inject constructor(
 
     fun setCacheMaxAgeDays(value: Float) = update {
         it.copy(cache = it.cache.copy(maxAgeDays = value.roundToInt()))
+    }
+
+    fun setSmartOfflineBuffer(enabled: Boolean) = update {
+        it.copy(ui = it.ui.copy(smartOfflineBuffer = enabled))
+    }
+
+    fun setTintIntensity(value: Float) = update {
+        it.copy(ui = it.ui.copy(tintIntensity = value))
+    }
+
+    fun setBackdropBlurRadiusDp(value: Int) = update {
+        it.copy(ui = it.ui.copy(backdropBlurRadiusDp = value))
+    }
+
+    fun setCodecDisplayMode(mode: CodecDisplayMode) = update {
+        it.copy(ui = it.ui.copy(codecDisplayMode = mode))
+    }
+
+    fun setTimeMachineLens(lens: TimeMachineLens) = update {
+        it.copy(ui = it.ui.copy(timeMachineLens = lens))
+    }
+
+    fun setUndatedTrackMode(mode: UndatedTrackMode) = update {
+        it.copy(ui = it.ui.copy(undatedTrackMode = mode))
+    }
+
+    /** Global Streams is opt-in only; nothing is fetched unless this is on. */
+    fun setGlobalStreamsOptIn(enabled: Boolean) = update {
+        it.copy(ui = it.ui.copy(globalStreamsOptIn = enabled))
+    }
+
+    fun setRingSpinSensitivity(value: Float) = update {
+        it.copy(ui = it.ui.copy(ringSpinSensitivity = value))
     }
 
     fun setAllowMeteredStreaming(enabled: Boolean) = update {

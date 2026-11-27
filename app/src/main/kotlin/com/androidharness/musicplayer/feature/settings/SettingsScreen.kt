@@ -43,6 +43,7 @@ import com.androidharness.musicplayer.ui.motion.motionBlurScroll
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.androidharness.musicplayer.data.settings.AudioCodec
+import com.androidharness.musicplayer.data.settings.CodecDisplayMode
 import com.androidharness.musicplayer.data.settings.TimeMachineMotion
 import com.androidharness.musicplayer.ui.chrome.BrandMark
 import com.androidharness.musicplayer.ui.chrome.ChromeBackdrop
@@ -154,6 +155,28 @@ fun SettingsScreen(
                             title = "Reduce motion",
                             checked = settings.ui.reducedMotion,
                             onCheckedChange = viewModel::setReducedMotion,
+                        )
+                        SliderRow(
+                            title = "Tint intensity",
+                            value = settings.ui.tintIntensity,
+                            valueText = "%.0f%%".format(settings.ui.tintIntensity * 100),
+                            range = 0f..1f,
+                            steps = 19,
+                            onChange = viewModel::setTintIntensity,
+                        )
+                        SliderRow(
+                            title = "Backdrop blur",
+                            value = settings.ui.backdropBlurRadiusDp.toFloat(),
+                            valueText = "${settings.ui.backdropBlurRadiusDp} dp",
+                            range = 0f..100f,
+                            onChange = { viewModel.setBackdropBlurRadiusDp(it.toInt()) },
+                        )
+                        SliderRow(
+                            title = "Ring spin sensitivity",
+                            value = settings.ui.ringSpinSensitivity,
+                            valueText = "%.2f×".format(settings.ui.ringSpinSensitivity),
+                            range = 0.25f..3f,
+                            onChange = viewModel::setRingSpinSensitivity,
                         )
                         Text(
                             text = "TIME MACHINE ART",
@@ -293,6 +316,16 @@ fun SettingsScreen(
                             checked = settings.library.syncOnWifiOnly,
                             onCheckedChange = viewModel::setSyncOnWifiOnly,
                         )
+                        SwitchRow(
+                            title = "Privacy & Telemetry Kill-Switch",
+                            checked = settings.ui.privacyKillSwitch,
+                            onCheckedChange = viewModel::setPrivacyKillSwitch,
+                        )
+                        SwitchRow(
+                            title = "Smart Offline Buffer",
+                            checked = settings.ui.smartOfflineBuffer,
+                            onCheckedChange = viewModel::setSmartOfflineBuffer,
+                        )
                         SliderRow(
                             title = "Image cache",
                             value = settings.cache.imageDiskMb.toFloat(),
@@ -360,13 +393,44 @@ fun SettingsScreen(
                                 )
                             }
                         }
+                        val isOriginal = settings.network.cellularTranscode.codec == AudioCodec.ORIGINAL
                         SliderRow(
                             title = "Cellular bitrate",
                             value = settings.network.cellularTranscode.maxBitrateKbps.toFloat(),
-                            valueText = "${settings.network.cellularTranscode.maxBitrateKbps} kbps",
+                            valueText = if (isOriginal) "Lossless / Source" else "${settings.network.cellularTranscode.maxBitrateKbps} kbps",
                             range = 64f..320f,
                             onChange = viewModel::setCellularBitrate,
+                            enabled = !isOriginal,
                         )
+                    }
+                }
+
+                item { SectionLabel("07", "CODEC & QUALITY BADGE", "DISPLAY") }
+                item {
+                    ChromePanel {
+                        Text(
+                            text = "BADGE DISPLAY STYLE",
+                            color = chrome.muted,
+                            style = MaterialTheme.typography.labelSmall,
+                            fontFamily = FontFamily.Monospace,
+                            modifier = Modifier.padding(bottom = 6.dp),
+                        )
+                        Row(
+                            modifier = Modifier.horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            listOf(
+                                CodecDisplayMode.RAW_CONTAINER to "Raw container/bitrate",
+                                CodecDisplayMode.SIMPLIFIED to "LOSSLESS / LOSSY",
+                                CodecDisplayMode.HIGHLIGHTED to "Highlight transcoded",
+                            ).forEach { (mode, label) ->
+                                ChromeChip(
+                                    label = label,
+                                    selected = settings.ui.codecDisplayMode == mode,
+                                    onClick = { viewModel.setCodecDisplayMode(mode) },
+                                )
+                            }
+                        }
                     }
                 }
 
@@ -492,6 +556,7 @@ private fun SliderRow(
     range: ClosedFloatingPointRange<Float>,
     steps: Int = 0,
     onChange: (Float) -> Unit,
+    enabled: Boolean = true,
 ) {
     val chrome = LocalChrome.current
     Column(Modifier.fillMaxWidth()) {
@@ -510,6 +575,7 @@ private fun SliderRow(
             onValueChange = onChange,
             valueRange = range,
             steps = steps,
+            enabled = enabled,
             colors = SliderDefaults.colors(
                 thumbColor = chrome.accent,
                 activeTrackColor = chrome.accent,

@@ -86,6 +86,19 @@ private val LightChrome = ChromePalette(
 
 val LocalChrome = staticCompositionLocalOf { DarkChrome }
 
+/** How strongly extracted artwork colors tint glass surfaces. 0 is neutral charcoal. */
+val LocalTintIntensity = staticCompositionLocalOf { 1f }
+
+/** Charcoal the artwork tint fades toward when the intensity control is turned down. */
+private val CharcoalBase = Color(0xFF14181A)
+
+/**
+ * Pulls an extracted artwork color toward neutral charcoal.
+ * `intensity` 1 keeps the color as-is, 0 returns flat charcoal glass.
+ */
+fun blendToCharcoal(color: Color, intensity: Float): Color =
+    lerp(CharcoalBase, color, intensity.coerceIn(0f, 1f))
+
 /** Brand blue and lime, lifted from the launcher icon. */
 val BrandBlue: Color = Color(0xFF1A22CC)
 val BrandLime: Color = Color(0xFFC9E86B)
@@ -93,10 +106,11 @@ val BrandYellow: Color = Color(0xFFFFC21A)
 val PillInk: Color = Color(0xFF111111)
 
 @Composable
-fun ChromeTheme(content: @Composable () -> Unit) {
+fun ChromeTheme(tintIntensity: Float = 1f, content: @Composable () -> Unit) {
     val dark = isSystemInDarkTheme()
     CompositionLocalProvider(
         LocalChrome provides (if (dark) DarkChrome else LightChrome),
+        LocalTintIntensity provides tintIntensity.coerceIn(0f, 1f),
         content = content,
     )
 }
@@ -113,11 +127,17 @@ fun ChromeBackdrop(
     reducedMotion: Boolean = false,
 ) {
     val chrome = LocalChrome.current
+    val tint = LocalTintIntensity.current
     val mood = remember { dayMood(LocalTime.now().hour) }
     val primarySeed = primary ?: if (chrome.dark) Color(0xFF2A32B0) else Color(0xFF7F89E8)
     val secondarySeed = secondary ?: if (chrome.dark) Color(0xFF7C8A3C) else Color(0xFFC9D89A)
-    val spec = remember(primarySeed, secondarySeed, mood, reducedMotion) {
-        auroraFor(primarySeed, secondarySeed, mood, reducedMotion)
+    val spec = remember(primarySeed, secondarySeed, mood, reducedMotion, tint) {
+        auroraFor(
+            blendToCharcoal(primarySeed, tint),
+            blendToCharcoal(secondarySeed, tint),
+            mood,
+            reducedMotion,
+        )
     }
     HomeBackdrop(
         spec = spec,
@@ -129,8 +149,7 @@ fun ChromeBackdrop(
     )
 }
 
-/** Mono section header with an index, matching the home shelves. */
-@Composable
+/** Mono section header with an index, matching the home shelves. */@Composable
 fun SectionLabel(
     index: String,
     title: String,
@@ -179,11 +198,12 @@ fun ChromePanel(
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val chrome = LocalChrome.current
+    val tint = LocalTintIntensity.current
     Column(
         modifier = modifier
             .fillMaxWidth()
             .clip(shape)
-            .background(chrome.ink.copy(alpha = contentAlpha))
+            .background(chrome.ink.copy(alpha = contentAlpha * (0.6f + 0.4f * tint)))
             .border(1.dp, chrome.ink.copy(alpha = 0.13f), shape)
             .padding(16.dp),
         content = content,
