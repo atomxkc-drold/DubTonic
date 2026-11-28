@@ -27,9 +27,24 @@ interface SubsonicApi {
     suspend fun getArtists(@Url url: String): SubsonicEnvelope<ArtistsBody>
 
     @GET
+    suspend fun getArtistsPage(
+        @Url url: String,
+        @Query("size") size: Int = 500,
+        @Query("offset") offset: Int = 0,
+    ): SubsonicEnvelope<ArtistsBody>
+
+    @GET
     suspend fun getArtist(
         @Url url: String,
         @Query("id") id: String,
+    ): SubsonicEnvelope<ArtistBody>
+
+    @GET
+    suspend fun getArtistAlbumsPage(
+        @Url url: String,
+        @Query("id") id: String,
+        @Query("size") size: Int = 500,
+        @Query("offset") offset: Int = 0,
     ): SubsonicEnvelope<ArtistBody>
 
     @GET

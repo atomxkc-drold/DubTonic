@@ -27,6 +27,7 @@ data class Track(
     val replayGainAlbumDb: Float? = null,
     val addedAtMs: Long = 0,
     val lastSyncedAtMs: Long = 0,
+    val bitDepth: Int? = 16,
 ) {
     val isLocal: Boolean get() = localUri != null
 }

@@ -115,6 +115,14 @@ object PlayerIcons {
         )
     }
 
+    val Artist: ImageVector by lazy {
+        icon("Artist", "M10 20v-6h4v6c5 3 5-2 10-2v-4h2v4c5 4 5-1 10-1h2v-4c-2.5-2-5-3-7.5-3-1.5 0-3 .5-4.5 2v4zM4 4v4h16v4H4zm0 4v4h12v4H4z")
+    }
+
+    val Album: ImageVector by lazy {
+        icon("Album", "M6 19h4V5H6v14zm8-14v14h4V5h-4zM2 12l2-2h4l2 2h-4zm0 4l2-2h6l2 2h-6zm-7-6h2v4H5v-4zm7 4h2v-4H5v4zm0 4h2v-4H5v4z")
+    }
+
     /**
      * The DubTonic app mark, lifted from ic_launcher_foreground.xml: a beamed double
      * note with the dub waveform riding in its hollow. The launcher art draws in a

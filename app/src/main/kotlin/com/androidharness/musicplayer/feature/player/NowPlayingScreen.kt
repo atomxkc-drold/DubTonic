@@ -408,49 +408,8 @@ private fun BoxScope.ArtworkBackdrop(uri: Uri?, blurRadiusDp: Int = 38) {
 
 @Composable
 private fun QualityLine(track: Track?, accent: Color, mode: CodecDisplayMode) {
-    val quality = track?.audioQuality() ?: AudioQuality.UNKNOWN
-    val parts = buildList {
-        if (quality != AudioQuality.UNKNOWN && mode != CodecDisplayMode.SIMPLIFIED) {
-            add(
-                when (quality) {
-                    AudioQuality.HI_RES -> "HI-RES"
-                    AudioQuality.LOSSLESS -> "LOSSLESS"
-                    AudioQuality.LOSSY -> "LOSSY"
-                    AudioQuality.UNKNOWN -> "AUDIO"
-                }
-            )
-        }
-        if (mode == CodecDisplayMode.RAW_CONTAINER) {
-            track?.format?.uppercase()?.takeIf { it.isNotBlank() }?.let(::add)
-        }
-        track?.sampleRateHz?.takeIf { it > 0 }?.let { add(sampleRateLabel(it)) }
-        track?.bitrateKbps?.takeIf { it > 0 }?.let { add("$it kbps") }
-    }
-    if (parts.isEmpty() && quality == AudioQuality.UNKNOWN) return
-
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Start) {
-        if (quality != AudioQuality.UNKNOWN) {
-            QualityBadge(quality, mode)
-            if (parts.isNotEmpty()) {
-                Spacer(Modifier.width(6.dp))
-                Text(
-                    text = parts.joinToString(" · "),
-                    color = Color.White.copy(alpha = 0.6f),
-                    fontSize = 11.sp,
-                    fontFamily = FontFamily.Monospace,
-                    textAlign = TextAlign.Start,
-                )
-            }
-        } else if (parts.isNotEmpty()) {
-            Text(
-                text = parts.joinToString(" · "),
-                color = accent,
-                fontSize = 11.sp,
-                fontFamily = FontFamily.Monospace,
-                textAlign = TextAlign.Start,
-            )
-        }
-    }
+    if (track == null) return
+    FullQualityLine(track = track, mode = mode)
 }
 
 @Composable

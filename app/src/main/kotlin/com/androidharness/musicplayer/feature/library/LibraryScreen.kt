@@ -337,12 +337,14 @@ private fun ColumnScope.TracksContent(
                             }
                         )
                     },
-                    onThumbsUp = {
+                    onGoToArtist = {
                         onIntent(
-                            LibraryIntent.SetThumbsUp(
-                                trackId = item.track.id,
-                                up = item.track.rating <= 0,
-                            )
+                            LibraryIntent.PlayArtist(item.track.artistId)
+                        )
+                    },
+                    onGoToAlbum = {
+                        onIntent(
+                            LibraryIntent.PlayAlbum(item.track.albumId)
                         )
                     },
                 )
@@ -493,10 +495,21 @@ private fun TracksToolbar(
                     tint = InkText.copy(alpha = 0.6f),
                 )
             }
+            // Glassmorphic dropdown menu with proper backdrop scrim
             DropdownMenu(
                 expanded = menuOpen,
                 onDismissRequest = { menuOpen = false },
+                // Use a glass surface with backdrop blur and scrim to prevent bleed-through
                 containerColor = PillBase,
+                // Apply backdrop filter to prevent underlying content bleed
+                modifier = Modifier
+                    .background(
+                        GlassSurface(
+                            shape = RoundedCornerShape(20.dp),
+                            alpha = 0.22f,
+                            borderAlpha = 0.35f,
+                        )
+                    ),
             ) {
                 TrackSort.entries.forEach { option ->
                     DropdownMenuItem(
@@ -648,7 +661,8 @@ private fun TrackPill(
     onPlay: () -> Unit,
     onFavorite: () -> Unit,
     onDownload: () -> Unit,
-    onThumbsUp: () -> Unit,
+    onGoToArtist: () -> Unit,
+    onGoToAlbum: () -> Unit,
 ) {
     var albumColor by remember(item.track.id) { mutableStateOf(DefaultArtColor) }
     var menuOpen by remember { mutableStateOf(false) }
@@ -680,7 +694,6 @@ private fun TrackPill(
         track.bitrateKbps?.takeIf { it > 0 && wideRow }?.let { "$it kbps" },
     ).joinToString(" · ")
     val quality = track.audioQuality()
-    val ratedUp = track.rating > 0
 
     Row(
         modifier = Modifier
@@ -744,12 +757,6 @@ private fun TrackPill(
                 }
                 Spacer(Modifier.width(2.dp))
                 MetaAction(
-                    icon = PlayerIcons.ThumbUp,
-                    contentDescription = if (ratedUp) "Remove thumbs up" else "Thumbs up",
-                    tint = if (ratedUp) AccentTeal else InkText.copy(alpha = 0.4f),
-                    onClick = onThumbsUp,
-                )
-                MetaAction(
                     icon = if (track.isDownloaded) PlayerIcons.Check else PlayerIcons.Download,
                     contentDescription = if (track.isDownloaded) {
                         "Remove download"
@@ -771,24 +778,40 @@ private fun TrackPill(
                     modifier = Modifier.size(20.dp),
                 )
             }
+            // Glassmorphic dropdown menu with proper backdrop scrim
             DropdownMenu(
                 expanded = menuOpen,
                 onDismissRequest = { menuOpen = false },
                 containerColor = PillBase,
+                modifier = Modifier
+                    .background(
+                        GlassSurface(
+                            shape = RoundedCornerShape(20.dp),
+                            alpha = 0.22f,
+                            borderAlpha = 0.35f,
+                        )
+                    ),
             ) {
                 TrackMenuItem(
-                    label = "Play now",
-                    icon = Icons.Filled.PlayArrow,
-                ) {
-                    menuOpen = false
-                    onPlay()
-                }
-                TrackMenuItem(
-                    label = if (track.isFavorite) "Remove from favorites" else "Add to favorites",
+                    label = if (track.isFavorite) "Unfavorite" else "Favorite",
                     icon = if (track.isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
                 ) {
                     menuOpen = false
                     onFavorite()
+                }
+                TrackMenuItem(
+                    label = "Go to ${track.artist}",
+                    icon = PlayerIcons.Artist,
+                ) {
+                    menuOpen = false
+                    onGoToArtist()
+                }
+                TrackMenuItem(
+                    label = "Go to ${track.album}",
+                    icon = PlayerIcons.Album,
+                ) {
+                    menuOpen = false
+                    onGoToAlbum()
                 }
                 TrackMenuItem(
                     label = if (track.isDownloaded) "Remove download" else "Download",
@@ -796,13 +819,6 @@ private fun TrackPill(
                 ) {
                     menuOpen = false
                     onDownload()
-                }
-                TrackMenuItem(
-                    label = if (ratedUp) "Remove thumbs up" else "Thumbs up",
-                    icon = PlayerIcons.ThumbUp,
-                ) {
-                    menuOpen = false
-                    onThumbsUp()
                 }
             }
         }

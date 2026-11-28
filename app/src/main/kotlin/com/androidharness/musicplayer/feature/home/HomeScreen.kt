@@ -718,15 +718,16 @@ private fun CollectionCard(
     ink: Color,
     muted: Color,
     onOpenLibrary: () -> Unit,
+    onOpenPlaylists: () -> Unit,
 ) {
     val shape = RoundedCornerShape(22.dp)
+    val pillShape = RoundedCornerShape(50)
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clip(shape)
             .background(ink.copy(alpha = 0.06f))
             .border(1.dp, ink.copy(alpha = 0.12f), shape)
-            .clickable(onClick = onOpenLibrary)
             .padding(horizontal = 18.dp, vertical = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -759,13 +760,38 @@ private fun CollectionCard(
                 style = MaterialTheme.typography.bodyMedium,
             )
         }
-        Text(
-            text = "BROWSE →",
-            color = ink,
-            style = MaterialTheme.typography.labelSmall,
-            fontFamily = FontFamily.Monospace,
-            fontWeight = FontWeight.Bold,
-        )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            androidx.compose.material3.TextButton(
+                onClick = onOpenLibrary,
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                colors = androidx.compose.material3.ButtonDefaults.textButtonColors(
+                    contentColor = ink,
+                ),
+                shape = pillShape,
+            ) {
+                Text(
+                    text = "BROWSE",
+                    style = MaterialTheme.typography.labelSmall,
+                    fontFamily = FontFamily.Monospace,
+                    fontWeight = FontWeight.Bold,
+                )
+            }
+            androidx.compose.material3.TextButton(
+                onClick = onOpenPlaylists,
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                colors = androidx.compose.material3.ButtonDefaults.textButtonColors(
+                    contentColor = accent,
+                ),
+                shape = pillShape,
+            ) {
+                Text(
+                    text = "PLAYLISTS",
+                    style = MaterialTheme.typography.labelSmall,
+                    fontFamily = FontFamily.Monospace,
+                    fontWeight = FontWeight.Bold,
+                )
+            }
+        }
     }
 }
 

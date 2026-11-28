@@ -136,20 +136,39 @@ class SubsonicMusicRepository @Inject constructor(
         return subsonicCall {
             credentials.require()
 
-            val artistList = api.getArtists(urls.rest("getArtists"))
-                .validated()
-                .artists
-                ?.index
-                .orEmpty()
-                .flatMap { it.artist }
-                .distinctBy { it.id }
+            // Full sync: paginate through all artists until exhausted.
+            // Subsonic getArtists returns paginated results; keep fetching until
+            // we hit an empty page so libraries larger than any single page are covered.
+            val artistList = mutableListOf<ArtistDto>()
+            var artistOffset = 0
+            var artistPageSize = 500
+            var hasMoreArtists = true
+
+            while (hasMoreArtists) {
+                val page = api.getArtistsPage(
+                    urls.rest("getArtists"),
+                    size = artistPageSize,
+                    offset = artistOffset,
+                ).validated()
+                val pageArtists = page.artists?.index?.orEmpty()
+                    ?.flatMap { it.artist }
+                    ?.distinctBy { it.id }
+                    ?: emptyList()
+                artistList.addAll(pageArtists)
+                if (pageArtists.size < artistPageSize) {
+                    hasMoreArtists = false
+                } else {
+                    artistOffset += artistPageSize
+                }
+            }
 
             artistDao.upsertAll(artistList.map { it.toArtist().toEntity() })
 
             var albumCount = 0
             var trackCount = 0
 
-            for (artist in artistList.take(MAX_ARTISTS_PER_SYNC)) {
+            // Full sync: paginate through albums per artist until exhausted.
+            for (artist in artistList) {
                 val artistDetail = api.getArtist(urls.rest("getArtist"), artist.id)
                     .validated()
                     .artist ?: continue
@@ -158,7 +177,28 @@ class SubsonicMusicRepository @Inject constructor(
                 albumDao.upsertAll(albums.map { it.toAlbum(now).toEntity() })
                 albumCount += albums.size
 
-                for (album in albums.take(MAX_ALBUMS_PER_ARTIST)) {
+                // Paginate through albums for this artist until exhausted.
+                var albumOffset = 0
+                var hasMoreAlbums = true
+                val albumsToProcess = mutableListOf<AlbumDto>()
+
+                while (hasMoreAlbums) {
+                    val albumPage = api.getArtistAlbumsPage(
+                        urls.rest("getArtist"),
+                        artist.id,
+                        size = 500,
+                        offset = albumOffset,
+                    ).validated()
+                    val pageAlbums = albumPage.album?.distinctBy { it.id } ?: emptyList()
+                    albumsToProcess.addAll(pageAlbums)
+                    if (pageAlbums.size < 500) {
+                        hasMoreAlbums = false
+                    } else {
+                        albumOffset += 500
+                    }
+                }
+
+                for (album in albumsToProcess) {
                     val detail = api.getAlbum(urls.rest("getAlbum"), album.id)
                         .validated()
                         .album ?: continue
@@ -285,6 +325,7 @@ class SubsonicMusicRepository @Inject constructor(
     private companion object {
         const val MAX_ARTISTS_PER_SYNC = 200
         const val MAX_ALBUMS_PER_ARTIST = 100
+        const val DOWNLOAD_NOTIFICATION_ID = 1001
     }
 }
 

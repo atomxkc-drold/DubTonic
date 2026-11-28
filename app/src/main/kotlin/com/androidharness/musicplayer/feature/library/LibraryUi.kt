@@ -10,7 +10,6 @@ enum class LibrarySection {
     TRACKS,
     ALBUMS,
     ARTISTS,
-    PLAYLISTS,
 }
 
 enum class TrackSort {
