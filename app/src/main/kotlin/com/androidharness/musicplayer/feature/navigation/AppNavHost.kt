@@ -15,13 +15,11 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.androidharness.musicplayer.feature.artist.ArtistDetailScreen
-import com.androidharness.musicplayer.feature.album.AlbumDetailScreen
 import com.androidharness.musicplayer.feature.home.HomeScreen
 import com.androidharness.musicplayer.feature.library.LibraryScreen
 import com.androidharness.musicplayer.feature.player.NowPlayingScreen
 import com.androidharness.musicplayer.feature.player.PlayerViewModel
 import com.androidharness.musicplayer.feature.settings.SettingsScreen
-import com.androidharness.musicplayer.feature.song.SongDetailScreen
 import com.androidharness.musicplayer.ui.theme.SpringSpecs
 
 private const val HOME = "home"
@@ -29,8 +27,6 @@ private const val LIBRARY = "library"
 private const val NOW_PLAYING = "now_playing"
 private const val SETTINGS = "settings"
 private const val ARTIST_DETAIL = "artist_detail"
-private const val ALBUM_DETAIL = "album_detail"
-private const val SONG_DETAIL = "song_detail"
 
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
@@ -74,6 +70,7 @@ fun AppNavHost(playerViewModel: PlayerViewModel = hiltViewModel()) {
                     sharedTransitionScope = this@SharedTransitionLayout,
                     animatedVisibilityScope = this@composable,
                     onOpenLibrary = { navController.navigate(LIBRARY) },
+                    onOpenPlaylists = { navController.navigate(LIBRARY) },
                     onOpenPlayer = { navController.navigate(NOW_PLAYING) },
                     onOpenSettings = { navController.navigate(SETTINGS) },
                 )
@@ -105,20 +102,6 @@ fun AppNavHost(playerViewModel: PlayerViewModel = hiltViewModel()) {
             onBack = { navController.popBackStack() },
         )
     }
-    composable(ALBUM_DETAIL) {
-        AlbumDetailScreen(
-            sharedTransitionScope = this@SharedTransitionLayout,
-            animatedVisibilityScope = this@composable,
-            onBack = { navController.popBackStack() },
-        )
-    }
-    composable(SONG_DETAIL) {
-        SongDetailScreen(
-            sharedTransitionScope = this@SharedTransitionLayout,
-            animatedVisibilityScope = this@composable,
-            onBack = { navController.popBackStack() },
-        )
-    }
-        }
+}
     }
 }

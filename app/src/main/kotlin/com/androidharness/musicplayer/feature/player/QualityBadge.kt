@@ -1,6 +1,7 @@
 package com.androidharness.musicplayer.feature.player
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
@@ -122,16 +123,20 @@ fun CodecQualityBadge(
         else -> BadgeType.UNKNOWN
     }
 
-    val (label, icon, textColor, pillColor) = when (badgeType) {
-        BadgeType.HI_RES -> "HI-RES" to PlayerIcons.Spectrum to Color(0xFF000000) to Color(0xFFFFC107)
-        BadgeType.LOSSLESS -> "LOSSLESS" to PlayerIcons.Waveform to Color(0xFF3DDC84) to Color(0xFF000000)
-        BadgeType.FLAC -> "FLAC" to PlayerIcons.Waveform to Color(0xFF3DDC84) to Color(0xFF000000)
-        BadgeType.MP3 -> "MP3" to PlayerIcons.Equalizer to Color(0xFFEF4444) to Color(0xFFFFFFFF)
-        BadgeType.AAC -> "AAC" to PlayerIcons.Equalizer to Color(0xFFEF4444) to Color(0xFFFFFFFF)
-        BadgeType.OPUS -> "OPUS" to PlayerIcons.Equalizer to Color(0xFFEF4444) to Color(0xFFFFFFFF)
-        BadgeType.LOSSY -> "LOSSY" to PlayerIcons.Equalizer to Color(0xFFEF4444) to Color(0xFFFFFFFF)
-        BadgeType.UNKNOWN -> "AUDIO" to PlayerIcons.Equalizer to Color(0xFFEF4444) to Color(0xFFFFFFFF)
+    val style = when (badgeType) {
+        BadgeType.HI_RES -> QualityStyle("HI-RES", PlayerIcons.Spectrum, Color(0xFF000000), Color(0xFFFFC107))
+        BadgeType.LOSSLESS -> QualityStyle("LOSSLESS", PlayerIcons.Waveform, Color(0xFF3DDC84), Color(0xFF000000))
+        BadgeType.FLAC -> QualityStyle("FLAC", PlayerIcons.Waveform, Color(0xFF3DDC84), Color(0xFF000000))
+        BadgeType.MP3 -> QualityStyle("MP3", PlayerIcons.Equalizer, Color(0xFFEF4444), Color(0xFFFFFFFF))
+        BadgeType.AAC -> QualityStyle("AAC", PlayerIcons.Equalizer, Color(0xFFEF4444), Color(0xFFFFFFFF))
+        BadgeType.OPUS -> QualityStyle("OPUS", PlayerIcons.Equalizer, Color(0xFFEF4444), Color(0xFFFFFFFF))
+        BadgeType.LOSSY -> QualityStyle("LOSSY", PlayerIcons.Equalizer, Color(0xFFEF4444), Color(0xFFFFFFFF))
+        BadgeType.UNKNOWN -> QualityStyle("AUDIO", PlayerIcons.Equalizer, Color(0xFFEF4444), Color(0xFFFFFFFF))
     }
+    val label = style.label
+    val icon = style.icon
+    val textColor = style.textColor
+    val pillColor = style.pillColor
 
     val highlighted = mode == CodecDisplayMode.HIGHLIGHTED && quality == AudioQuality.HI_RES
     val finalPillColor = if (highlighted) Color(0xFFFFC107) else pillColor
@@ -170,11 +175,15 @@ fun SourceBadge(
     val isLocal = track.isLocal
     val isStreaming = !isDownloaded && !isLocal
 
-    val (label, icon, textColor, pillColor) = when {
-        isLocal -> "LOCAL" to PlayerIcons.Smartphone to Color(0xFF3DDC84) to Color(0xFF000000)
-        isDownloaded -> "DOWNLOADED" to PlayerIcons.Check to Color(0xFF3DDC84) to Color(0xFF000000)
-        isStreaming -> "SUBSONIC" to PlayerIcons.DubTonic to Color(0xFF000000) to Color(0xFFFFC107)
+    val style = when {
+        isLocal -> QualityStyle("LOCAL", PlayerIcons.Smartphone, Color(0xFF3DDC84), Color(0xFF000000))
+        isDownloaded -> QualityStyle("DOWNLOADED", PlayerIcons.Check, Color(0xFF3DDC84), Color(0xFF000000))
+        else -> QualityStyle("SUBSONIC", PlayerIcons.DubTonic, Color(0xFF000000), Color(0xFFFFC107))
     }
+    val label = style.label
+    val icon = style.icon
+    val textColor = style.textColor
+    val pillColor = style.pillColor
 
     Row(
         modifier = modifier

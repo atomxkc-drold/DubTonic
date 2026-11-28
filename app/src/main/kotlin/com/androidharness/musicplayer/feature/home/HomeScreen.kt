@@ -81,6 +81,7 @@ fun HomeScreen(
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope,
     onOpenLibrary: () -> Unit,
+    onOpenPlaylists: () -> Unit,
     onOpenPlayer: () -> Unit,
     onOpenSettings: () -> Unit,
     viewModel: HomeViewModel = hiltViewModel(),
@@ -332,6 +333,7 @@ fun HomeScreen(
                     ink = ink,
                     muted = muted,
                     onOpenLibrary = onOpenLibrary,
+                    onOpenPlaylists = onOpenPlaylists,
                 )
 
                 Spacer(Modifier.height(26.dp))

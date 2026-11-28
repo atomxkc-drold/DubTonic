@@ -339,12 +339,12 @@ private fun ColumnScope.TracksContent(
                     },
                     onGoToArtist = {
                         onIntent(
-                            LibraryIntent.PlayArtist(item.track.artistId)
+                            LibraryIntent.PlayArtist(item.track.artistId.orEmpty())
                         )
                     },
                     onGoToAlbum = {
                         onIntent(
-                            LibraryIntent.PlayAlbum(item.track.albumId)
+                            LibraryIntent.PlayAlbum(item.track.albumId.orEmpty())
                         )
                     },
                 )
@@ -501,15 +501,9 @@ private fun TracksToolbar(
                 onDismissRequest = { menuOpen = false },
                 // Use a glass surface with backdrop blur and scrim to prevent bleed-through
                 containerColor = PillBase,
-                // Apply backdrop filter to prevent underlying content bleed
+                // Translucent scrim so the menu does not bleed through to the list behind it.
                 modifier = Modifier
-                    .background(
-                        GlassSurface(
-                            shape = RoundedCornerShape(20.dp),
-                            alpha = 0.22f,
-                            borderAlpha = 0.35f,
-                        )
-                    ),
+                    .background(Color.White.copy(alpha = 0.22f)),
             ) {
                 TrackSort.entries.forEach { option ->
                     DropdownMenuItem(
@@ -784,13 +778,7 @@ private fun TrackPill(
                 onDismissRequest = { menuOpen = false },
                 containerColor = PillBase,
                 modifier = Modifier
-                    .background(
-                        GlassSurface(
-                            shape = RoundedCornerShape(20.dp),
-                            alpha = 0.22f,
-                            borderAlpha = 0.35f,
-                        )
-                    ),
+                    .background(Color.White.copy(alpha = 0.22f)),
             ) {
                 TrackMenuItem(
                     label = if (track.isFavorite) "Unfavorite" else "Favorite",

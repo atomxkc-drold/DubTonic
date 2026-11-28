@@ -22,6 +22,8 @@ import com.androidharness.musicplayer.data.remote.SubsonicApi
 import com.androidharness.musicplayer.data.remote.SubsonicCredentialsStore
 import com.androidharness.musicplayer.data.remote.SubsonicUrls
 import com.androidharness.musicplayer.data.remote.StreamUri
+import com.androidharness.musicplayer.data.remote.dto.AlbumDto
+import com.androidharness.musicplayer.data.remote.dto.ArtistDto
 import com.androidharness.musicplayer.data.remote.subsonicCall
 import com.androidharness.musicplayer.data.remote.toAlbum
 import com.androidharness.musicplayer.data.remote.toArtist
@@ -189,7 +191,7 @@ class SubsonicMusicRepository @Inject constructor(
                         size = 500,
                         offset = albumOffset,
                     ).validated()
-                    val pageAlbums = albumPage.album?.distinctBy { it.id } ?: emptyList()
+                    val pageAlbums = albumPage.artist?.album?.distinctBy { it.id } ?: emptyList()
                     albumsToProcess.addAll(pageAlbums)
                     if (pageAlbums.size < 500) {
                         hasMoreAlbums = false

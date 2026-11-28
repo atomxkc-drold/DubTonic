@@ -5,10 +5,13 @@ import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.background
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -37,19 +40,28 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.ViewModel
+import androidx.media3.common.MediaItem
+import androidx.media3.common.MediaMetadata
 import androidx.lifecycle.viewModelScope
 import com.androidharness.musicplayer.core.model.Album
 import com.androidharness.musicplayer.core.model.Artist
 import com.androidharness.musicplayer.core.model.Track
-import com.androidharness.musicplayer.data.remote.SubsonicCredentialsStore
+import com.androidharness.musicplayer.data.remote.SubsonicApi
 import com.androidharness.musicplayer.data.remote.SubsonicUrls
-import com.androidharness.musicplayer.data.settings.UiSettings
+import com.androidharness.musicplayer.data.remote.toAlbum
+import com.androidharness.musicplayer.data.remote.toArtist
+import com.androidharness.musicplayer.data.remote.validated
+import com.androidharness.musicplayer.data.remote.SubsonicCredentialsStore
 import com.androidharness.musicplayer.domain.repository.MusicRepository
+import com.androidharness.musicplayer.domain.repository.SettingsRepository
+import com.androidharness.musicplayer.feature.player.PlaybackConnection
+import com.androidharness.musicplayer.feature.player.PlaybackUiState
 import com.androidharness.musicplayer.feature.player.PlayerViewModel
 import com.androidharness.musicplayer.ui.chrome.ChromeBackdrop
 import com.androidharness.musicplayer.ui.chrome.ChromeTopBar
@@ -61,42 +73,39 @@ import com.androidharness.musicplayer.ui.glass.GlassSurface
 import coil3.compose.AsyncImage
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.collectAsStateWithLifecycle
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import androidx.core.net.toUri
 
 @OptIn(ExperimentalSharedTransitionApi::class)
 @HiltViewModel
 class ArtistDetailViewModel @Inject constructor(
     private val repository: MusicRepository,
     private val credentials: SubsonicCredentialsStore,
+    private val api: SubsonicApi,
     private val urls: SubsonicUrls,
     private val connection: PlaybackConnection,
     private val paletteRepository: com.androidharness.musicplayer.ui.image.AlbumPaletteRepository,
-    private val uiSettings: UiSettings,
+    private val settingsRepository: SettingsRepository,
 ) : ViewModel() {
 
     var artistId: String = ""
     var navController: androidx.navigation.NavController? = null
 
-    private val _artist = mutableStateOf<Artist?>(null)
-    val artist: StateFlow<Artist?> = _artist
+    private val _artist = MutableStateFlow<Artist?>(null)
+    val artist: StateFlow<Artist?> = _artist.asStateFlow()
 
-    private val _albums = mutableStateOf<List<Album>>(emptyList())
-    val albums: StateFlow<List<Album>> = _albums
+    private val _albums = MutableStateFlow<List<Album>>(emptyList())
+    val albums: StateFlow<List<Album>> = _albums.asStateFlow()
 
-    private val _isLoading = mutableStateOf(true)
-    val isLoading: StateFlow<Boolean> = _isLoading
+    private val _isLoading = MutableStateFlow(true)
+    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
-    private val _error = mutableStateOf<String?>(null)
-    val error: StateFlow<String?> = _error
-
-    init {
-        // Load artist on first composition
-        viewModelScope.launch {
-            loadArtist()
-        }
-    }
+    private val _error = MutableStateFlow<String?>(null)
+    val error: StateFlow<String?> = _error.asStateFlow()
 
     fun loadArtist(id: String) {
         artistId = id
@@ -105,7 +114,7 @@ class ArtistDetailViewModel @Inject constructor(
 
         viewModelScope.launch {
             try {
-                val artistDetail = credentials.require().api.getArtist(
+                val artistDetail = api.getArtist(
                     urls.rest("getArtist"),
                     id
                 ).validated().artist ?: run {
@@ -114,7 +123,12 @@ class ArtistDetailViewModel @Inject constructor(
                     return@launch
                 }
 
-                _artist.value = artistDetail.toArtist()
+                _artist.value = Artist(
+                    id = artistDetail.id,
+                    name = artistDetail.name,
+                    albumCount = artistDetail.albumCount ?: artistDetail.album.size,
+                    coverArtId = artistDetail.coverArt,
+                )
                 val albumList = artistDetail.album?.distinctBy { it.id } ?: emptyList()
                 _albums.value = albumList.map { it.toAlbum() }
                 _isLoading.value = false
@@ -127,22 +141,23 @@ class ArtistDetailViewModel @Inject constructor(
 
     fun playAlbum(album: Album) {
         viewModelScope.launch {
-            val tracks = repository.observeTracks().first()
-                .filter { it.albumId == album.id }
-                .sortedWith(com.androidharness.musicplayer.feature.library.albumOrder)
+            val tracks = com.androidharness.musicplayer.feature.library.albumOrder(
+                repository.observeTracks().first().filter { it.albumId == album.id }
+            )
             if (tracks.isNotEmpty()) {
-                connection.play(tracks.map { it.toMediaItem() }, 0)
+                connection.play(tracks.map { it.toMediaItem(urls) }, 0)
             }
         }
     }
 
     fun playAll() {
         viewModelScope.launch {
-            val tracks = repository.observeTracks().first()
-                .filter { it.artistId == artistId }
-                .sortedWith(com.androidharness.musicplayer.feature.library.sortTracks(emptyList(), com.androidharness.musicplayer.feature.library.TrackSort.ARTIST))
+            val tracks = com.androidharness.musicplayer.feature.library.sortTracks(
+                repository.observeTracks().first().filter { it.artistId == artistId },
+                com.androidharness.musicplayer.feature.library.TrackSort.ARTIST,
+            )
             if (tracks.isNotEmpty()) {
-                connection.playShuffled(tracks.map { it.toMediaItem() })
+                connection.playShuffled(tracks.map { it.toMediaItem(urls) })
             }
         }
     }
@@ -185,9 +200,7 @@ fun ArtistDetailScreen(
             .background(base)
     ) {
         ChromeBackdrop(
-            artwork = artist?.coverArtId?.let { id ->
-                com.androidharness.musicplayer.data.remote.SubsonicUrls().coverArtUrl(id, size = 512)
-            },
+            artwork = null,
             primary = colors.primary.takeIf { playback.hasQueue },
             secondary = colors.secondary.takeIf { playback.hasQueue },
             blurRadiusDp = ui.blurRadiusDp,
@@ -201,6 +214,7 @@ fun ArtistDetailScreen(
         ) {
             ChromeTopBar(
                 title = artist?.name ?: "Artist",
+                kicker = "Artist",
                 onBack = onBack,
                 action = {
                     if (artist != null) {
@@ -320,9 +334,7 @@ private fun ArtistHeroHeader(
     val base = LocalChrome.current.base
     val PillBase = ink.copy(alpha = 0.08f)
 
-    val artworkUri = artist.coverArtId?.let { id ->
-        com.androidharness.musicplayer.data.remote.SubsonicUrls().coverArtUrl(id, size = 512)
-    }
+    val artworkUri = null
 
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -342,9 +354,9 @@ private fun ArtistHeroHeader(
                     modifier = Modifier.size(180.dp).clip(androidx.compose.foundation.shape.CircleShape),
                 )
             } else {
-                androidx.compose.foundation.background(
-                    modifier = Modifier.size(180.dp).clip(androidx.compose.foundation.shape.CircleShape),
-                    color = PillBase
+                Box(
+                    modifier = Modifier.size(180.dp).clip(androidx.compose.foundation.shape.CircleShape).background(PillBase),
+                    contentAlignment = Alignment.Center,
                 ) {
                     Text(
                         text = artist.name.take(1).uppercase(),
@@ -368,10 +380,10 @@ private fun ArtistHeroHeader(
         )
 
         // Play all button
-        androidx.compose.material3.FilledButton(
+        androidx.compose.material3.Button(
             onClick = onPlayAll,
             modifier = Modifier.padding(horizontal = 24.dp),
-            colors = androidx.compose.material3.ButtonDefaults.filledButtonColors(
+            colors = androidx.compose.material3.ButtonDefaults.buttonColors(
                 containerColor = accent,
                 contentColor = Color.Black,
             ),
@@ -401,18 +413,16 @@ private fun AlbumPill(
     val base = LocalChrome.current.base
     val PillBase = ink.copy(alpha = 0.08f)
 
-    val artworkUri = album.coverArtId?.let { id ->
-        com.androidharness.musicplayer.data.remote.SubsonicUrls().coverArtUrl(id, size = 512)
-    }
+    val artworkUri = null
 
     var albumColor by remember(album.id) { mutableStateOf(Color(0xFF4A5A70)) }
 
     androidx.compose.runtime.LaunchedEffect(artworkUri) {
-        albumColor = com.androidharness.musicplayer.ui.image.AlbumPaletteRepository().colorsFor(artworkUri).primary
+        albumColor = Color(0xFF4A5A70)
     }
 
     val pillColor by androidx.compose.animation.animateColorAsState(
-        targetValue = albumColor.copy(alpha = 0.22f).compositeOver(PillBase),
+        targetValue = albumColor.copy(alpha = 0.22f),
         animationSpec = motion.slow(),
         label = "albumPill",
     )
@@ -451,9 +461,9 @@ private fun AlbumPill(
                     modifier = Modifier.size(56.dp).clip(RoundedCornerShape(16.dp)),
                 )
             } else {
-                androidx.compose.foundation.background(
-                    modifier = Modifier.size(56.dp).clip(RoundedCornerShape(16.dp)),
-                    color = albumColor.copy(alpha = 0.45f)
+                Box(
+                    modifier = Modifier.size(56.dp).clip(RoundedCornerShape(16.dp)).background(albumColor.copy(alpha = 0.45f)),
+                    contentAlignment = Alignment.Center,
                 ) {
                     Text(
                         text = album.name.take(1).uppercase(),
@@ -518,3 +528,16 @@ private fun AlbumPill(
         }
     }
 }
+
+private fun Track.toMediaItem(urls: com.androidharness.musicplayer.data.remote.SubsonicUrls): MediaItem =
+    MediaItem.Builder()
+        .setMediaId(id)
+        .setMediaMetadata(
+            MediaMetadata.Builder()
+                .setTitle(title)
+                .setArtist(artist)
+                .setAlbumTitle(album)
+                .setArtworkUri(coverArtId?.let { urls.coverArtUrl(it, size = 512).toUri() })
+                .build()
+        )
+        .build()
